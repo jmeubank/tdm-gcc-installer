@@ -9,7 +9,8 @@
 
 
 
-!define SETUP_VER "1.808.1"
+!define SETUP_VER "1.808.2"
+OutFile "output\tdm-mingw-1.808.2-webdl.exe"
 
 !packhdr "exehead.tmp" 'upx --best exehead.tmp'
 
@@ -25,8 +26,6 @@
 !define INFOURL "http://www.tdragon.net/recentgcc/"
 !define UPDATEURL "http://www.tdragon.net/recentgcc/"
 !define PUBLISHER "TDM"
-
-OutFile "output\tdm-mingw-1.808.1-webdl.exe"
 
 !include "main.nsh"
 
