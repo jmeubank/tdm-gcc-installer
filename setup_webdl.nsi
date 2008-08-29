@@ -26,7 +26,7 @@
 !define UPDATEURL "http://www.tdragon.net/recentgcc/"
 !define PUBLISHER "TDM"
 
-OutFile "output\tdm-mingw-webdl.exe"
+OutFile "output\tdm-mingw-1.808.1-webdl.exe"
 
 !include "main.nsh"
 

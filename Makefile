@@ -4,8 +4,8 @@
 # Tested under MinGW GCC 3.4.5 and (unofficial) 4.3.1
 
 
-SETUPEXEFULL = output/tdm-mingw-full.exe
-SETUPEXEWEBDL = output/tdm-mingw-webdl.exe
+SETUPEXEFULL = output/tdm-mingw-1.808.1-f2.exe
+SETUPEXEWEBDL = output/tdm-mingw-1.808.1-webdl.exe
 TDMINSTDLL = plugins/tdminstall.dll
 
 

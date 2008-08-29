@@ -10,7 +10,7 @@
 
 !define INNER_COMPONENTS "inner-manifest.txt"
 
-!define SETUP_VER "1.808.1"
+!define SETUP_VER "1.808.1-f2"
 
 !packhdr "exehead.tmp" 'upx --best exehead.tmp'
 
@@ -27,7 +27,7 @@
 !define UPDATEURL "http://www.tdragon.net/recentgcc/"
 !define PUBLISHER "TDM"
 
-OutFile "output\tdm-mingw-full.exe"
+OutFile "output\tdm-mingw-1.808.1-f2.exe"
 
 !include "main.nsh"
 

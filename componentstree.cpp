@@ -717,7 +717,7 @@ HTREEITEM ComponentsTree::AddItem
 			{
 				if (NonEmptyAttribute(ex_el, "prev"))
 					item->prev_inst = true;
-				UpdateItemAttrs(item, ex_el, false);
+				UpdateItemAttrs(item, ex_el, item->prev_inst);
 			}
 		}
 	}

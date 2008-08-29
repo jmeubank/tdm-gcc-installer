@@ -1,11 +1,11 @@
-^.objs
-.o$
+syntax: glob
+.objs
+**.o
 ctemplate.exe
-tdm-mingw-full.exe
-tdm-mingw-webdl.exe
+tdm-mingw-*.exe
 tdminstall.dll
-^archives\.*
-^releases\.*
+archives
+releases
 arcout.nsh
 arcreg.nsh
 TDMInstall.depend
