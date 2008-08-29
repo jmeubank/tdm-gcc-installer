@@ -614,7 +614,8 @@ bool ComponentsTree::ProcessManifest
 					 cel = cel->NextSiblingElement())
 					{
 						if (strcmp(cel->Value(), "Description") == 0
-						 || strcmp(cel->Value(), "Archive") == 0)
+						 || strcmp(cel->Value(), "Archive") == 0
+						 || strcmp(cel->Value(), "Entry") == 0)
 						{
 							linked_el->LinkEndChild(cel->Clone());
 						}
