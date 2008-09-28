@@ -26,17 +26,25 @@
 	<Component id="mingw-runtime" name="mingw-runtime">
 		<Description>Headers and import libraries for Microsoft's C Runtime,
 		 with minimal GNU extensions</Description>
-		<Version default="true" id="mingw-runtime-3.14" name="MinGW Stable: 3.14" unsize="6572058">
-			<Description>Current Release - mingw-runtime-3.14</Description>
-			<Archive path="mingw-runtime-3.14.tar.gz" arcsize="506843" />
+		<Version default="true" id="mingw-runtime-3.15" name="MinGW Stable: 3.15" unsize="7312065">
+			<Description>Current Release - mingw-runtime-3.15</Description>
+			<Archive path="mingwrt-3.15-mingw32-dev.tar.gz" arcsize="552472" />
+			<Archive path="mingwrt-3.15-mingw32-dll.tar.gz" arcsize="6899" />
 		</Version>
 	</Component>
 	<Component id="w32api" name="w32api">
 		<Description>Headers and import libraries for Microsoft's Win32
 		 API</Description>
-		<Version default="true" id="w32api-3.11" name="MinGW Stable: 3.11" unsize="14497060">
-			<Description>Current Release - w32api-3.11</Description>
-			<Archive path="w32api-3.11.tar.gz" arcsize="1628397" />
+		<Version default="true" id="w32api-3.12" name="MinGW Stable: 3.12" unsize="14583803">
+			<Description>Current Release - w32api-3.12</Description>
+			<Archive path="w32api-3.12-mingw32-dev.tar.gz" arcsize="1643172" />
+		</Version>
+	</Component>
+	<Component id="mingw32-make" name="mingw32-make">
+		<Description>GNU Make for MinGW (not to be used in MSYS)</Description>
+		<Version default="true" id="mingw32-make-3.81-20080326-3" name="MinGW Stable: 3.81-20080326-3" unsize="706940">
+			<Description>Current Release - mingw32-make-3.81-20080326-3</Description>
+			<Archive path="mingw32-make-3.81-20080326-3.tar.gz" arcsize="225708" />
 		</Version>
 	</Component>
 	<Component id="gdb" name="gdb">
@@ -50,8 +58,9 @@
 		<Select id="gcc-core-4.3.2-tdm-1" />
 		<Select id="gcc-g++-4.3.2-tdm-1" />
 		<Select id="binutils-2.18.50-20080109-2" />
-		<Select id="mingw-runtime-3.14" />
-		<Select id="w32api-3.11" />
+		<Select id="mingw-runtime-3.15" />
+		<Select id="w32api-3.12" />
+		<Select id="mingw32-make-3.81-20080326-3" />
 		<Select id="gdb-6.8-3" />
 	</InstallType>
 </TDMInstallManifest>
