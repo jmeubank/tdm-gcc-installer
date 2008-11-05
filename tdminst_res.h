@@ -25,7 +25,7 @@ this file freely.
 #define IDT_UVMSG 1401
 
 #define IDD_INSTFINDBANNER 1410
-#define IDD_UPDATEVER 1411
+/* #define IDD_UPDATEVER 1411 */
 
 
 #endif // TDMINST_RES_H_INC

@@ -325,6 +325,7 @@ static int VersionCompare(const char* v1, const char* v2)
 }
 
 
+#if 0
 static INT_PTR CALLBACK UpdateVerProc
  (HWND hwndDlg,
   UINT uMsg,
@@ -369,6 +370,7 @@ static INT_PTR CALLBACK UpdateVerProc
 	}
 	return FALSE;
 }
+#endif
 
 
 extern "C" void __declspec(dllexport) SetManifest
@@ -401,8 +403,11 @@ extern "C" void __declspec(dllexport) SetManifest
 					 TiXmlHandle(minver->FirstChild()).ToText();
 					if (txtel)
 					{
-						DialogBoxParam(ginstance, MAKEINTRESOURCE(IDD_UPDATEVER),
-						 parentwnd, UpdateVerProc, (LPARAM)txtel->Value());
+						//DialogBoxParam(ginstance, MAKEINTRESOURCE(IDD_UPDATEVER),
+						// parentwnd, UpdateVerProc, (LPARAM)txtel->Value());
+						MessageBox(parentwnd, txtel->Value(),
+						 "Updated Version Available",
+						 MB_OK | MB_ICONINFORMATION);
 						ret = "update";
 					}
 				}
@@ -918,14 +923,14 @@ extern "C" void __declspec(dllexport) GetDownloadProgress
 }
 
 
-extern "C" void __declspec(dllexport) GetStartMenuSelected
+extern "C" void __declspec(dllexport) GetComponentSelected
 (HWND hwndParent,
  int string_size,
  char *variables,
  stack_t **stacktop,
  extra_parameters *extra)
 {
-	int smindex = ctree.GetIndex("startmenu");
+	int smindex = ctree.GetIndex(NSIS::popstring());
 	if (smindex >= 0)
 		NSIS::pushint(ctree.IsSelected(smindex) ? 1 : 0);
 	else
@@ -1615,6 +1620,19 @@ extern "C" void __declspec(dllexport) RegisterInnerArchive
 	NSIS::UpdateParams(string_size, variables, stacktop, extra);
 
 	ctree.SetInnerArchive(NSIS::popstring());
+}
+
+
+extern "C" void __declspec(dllexport) BroadcastEnvChange
+(HWND hwndParent,
+ int string_size,
+ char *variables,
+ stack_t **stacktop,
+ extra_parameters *extra)
+{
+	DWORD dwReturnValue;
+	SendMessageTimeout(HWND_BROADCAST, WM_SETTINGCHANGE, 0,
+	 (LPARAM)"Environment", SMTO_ABORTIFHUNG, 5000, &dwReturnValue);
 }
 
 

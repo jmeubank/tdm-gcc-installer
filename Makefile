@@ -1,11 +1,11 @@
 # Makefile for TDMInstall
 # Created: JohnE, 2008-07-28
 #
-# Tested under MinGW GCC 3.4.5 and (unofficial) 4.3.1
+# Tested under MinGW GCC 3.4.5 and (unofficial) 4.3.2
 
 
-SETUPEXEFULL = output/tdm-mingw-1.808.2-f1.exe
-SETUPEXEWEBDL = output/tdm-mingw-1.808.2-webdl.exe
+SETUPEXEFULL = output/tdm-mingw-1.811.0-f1.exe
+SETUPEXEWEBDL = output/tdm-mingw-1.811.0-webdl.exe
 TDMINSTDLL = plugins/tdminstall.dll
 
 

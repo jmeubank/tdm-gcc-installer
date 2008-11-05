@@ -111,6 +111,11 @@ bool ComponentsTree::BuildTreeView
 	GetItemFromHandle(hsmenu)->description =
 	 "Add an entry for " STR_SHORTNAME " to the Start Menu";
 	OnStateToggle(hsmenu);
+	HTREEITEM haddpath =
+	 AddItem(0, 0, ITEM_EXTRA, "addpath", "Add to PATH", 0);
+	GetItemFromHandle(haddpath)->description =
+	 "Add the " STR_SHORTNAME " 'bin' folder to the PATH environment variable";
+	OnStateToggle(haddpath);
 	TreeView_Expand(htreeview, hroot, TVE_EXPAND);
 	return true;
 }

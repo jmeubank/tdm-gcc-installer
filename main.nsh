@@ -10,7 +10,7 @@
 
 ;;;;;
 ;; All the dirty work happens here. For the basic settings you're wanting to
-;; change, look in "setup.nsi".
+;; change, look in "setup_*.nsi".
 ;;;;;
 
 
@@ -43,6 +43,8 @@ CompletedText "$comp_text"
 !insertmacro un.GetParameters
 !include StrFunc.nsh
 ${StrRep}
+${UnStrRep}
+${UnStrLoc}
 
 !define MULTIUSER_EXECUTIONLEVEL Highest
 !include MultiUser.nsh
@@ -160,7 +162,7 @@ Section "Install Components" SEC_INSTALL_COMPONENTS
 	tdminstall::AddManMiscFile /NOUNLOAD "$EXEFILE"
 
 	; Start menu shortcuts
-	tdminstall::GetStartMenuSelected /NOUNLOAD
+	tdminstall::GetComponentSelected /NOUNLOAD "startmenu"
 	Pop $0
 	${If} $0 == 1
 		CreateDirectory "$SMPROGRAMS\${STARTMENU_ENTRY}"
@@ -171,6 +173,31 @@ Section "Install Components" SEC_INSTALL_COMPONENTS
 		CreateShortCut \
 		 "$SMPROGRAMS\${STARTMENU_ENTRY}\Modify or Remove MinGW.lnk" \
 		 "$inst_dir\$EXEFILE"
+	${EndIf}
+
+	; PATH addition
+	tdminstall::GetComponentSelected /NOUNLOAD "addpath"
+	Pop $0
+	${If} $0 == 1
+		DetailPrint "Adding '$inst_dir\bin' to PATH"
+		${If} "$MultiUser.InstallMode" == "AllUsers"
+			ReadRegStr $0 HKLM \
+			 "SYSTEM\CurrentControlSet\Control\Session Manager\Environment" \
+			 "Path"
+			${If} $0 != ""
+				StrCpy $0 "$0;"
+			${EndIf}
+			WriteRegExpandStr HKLM \
+			 "SYSTEM\CurrentControlSet\Control\Session Manager\Environment" \
+			 "Path" "$0$inst_dir\bin"
+		${Else}
+			ReadRegStr $0 HKCU "Environment" "Path"
+			${If} $0 != ""
+				StrCpy $0 "$0;"
+			${EndIf}
+			WriteRegExpandStr HKCU "Environment" "Path" "$0$inst_dir\bin"
+		${EndIf}
+		tdminstall::BroadcastEnvChange /NOUNLOAD
 	${EndIf}
 
 	; Add/Remove Programs entry
@@ -272,6 +299,30 @@ Section "un.Uninstall"
 				DetailPrint "Removed '${STARTMENU_ENTRY}' Start Menu entry"
 			${EndIf}
 		${EndIf}
+		DetailPrint "Removing any instances of '$uninst\bin' from PATH"
+		${If} "$MultiUser.InstallMode" == "AllUsers"
+			ReadRegStr $0 HKLM \
+			 "SYSTEM\CurrentControlSet\Control\Session Manager\Environment" \
+			 "Path"
+			${If} $0 != ""
+				Push "$0"
+				Push "$uninst\bin"
+				Call un.RemovePathEntry
+				Pop $0
+				WriteRegExpandStr HKLM \
+				 "SYSTEM\CurrentControlSet\Control\Session Manager\Environment" \
+				 "Path" "$0"
+			${EndIf}
+		${EndIf}
+		ReadRegStr $0 HKCU "Environment" "Path"
+		${If} $0 != ""
+			Push "$0"
+			Push "$uninst\bin"
+			Call un.RemovePathEntry
+			Pop $0
+			WriteRegExpandStr HKCU "Environment" "Path" "$0"
+		${EndIf}
+		tdminstall::BroadcastEnvChange /NOUNLOAD
 		ReadRegStr $0 SHELL_CONTEXT \
 		 "Software\Microsoft\Windows\CurrentVersion\Uninstall\${UNINSTKEY}" \
 		 "UninstallString"
@@ -302,6 +353,41 @@ onerrorun:
 uninstend:
 	RealProgress::SetProgress /NOUNLOAD 100
 SectionEnd
+
+Function un.RemovePathEntry
+	Var /GLOBAL rpe_full
+	Var /GLOBAL rpe_entry
+	Pop $rpe_entry
+	Pop $rpe_full
+	Push $R1
+	Push $R2
+
+	StrCpy $R2 ""
+	${UnStrLoc} $R1 "$rpe_full" "$rpe_entry;" ">"
+	${While} $R1 != ""
+		StrCpy $R2 1
+		${UnStrRep} $rpe_full "$rpe_full" "$rpe_entry;" ""
+		${UnStrLoc} $R1 "$rpe_full" "$rpe_entry;" ">"
+	${EndWhile}
+	${UnStrLoc} $R1 "$rpe_full" ";$rpe_entry" ">"
+	${While} $R1 != ""
+		StrCpy $R2 1
+		${UnStrRep} $rpe_full "$rpe_full" ";$rpe_entry" ""
+		${UnStrLoc} $R1 "$rpe_full" ";$rpe_entry" ">"
+	${EndWhile}
+	${If} $R2 != ""
+		${UnStrLoc} $R1 "$rpe_full" "$rpe_entry" ">"
+		${While} $R1 != ""
+			StrCpy $R2 1
+			${UnStrRep} $rpe_full "$rpe_full" "$rpe_entry" ""
+			${UnStrLoc} $R1 "$rpe_full" "$rpe_entry" ">"
+		${EndWhile}
+	${EndIf}
+
+	Pop $R2
+	Pop $R1
+	Push $rpe_full
+FunctionEnd
 
 
 ;;; Special functions

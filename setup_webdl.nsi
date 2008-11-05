@@ -9,8 +9,8 @@
 
 
 
-!define SETUP_VER "1.808.3"
-OutFile "output\tdm-mingw-1.808.3-webdl.exe"
+!define SETUP_VER "1.811.0"
+OutFile "output\tdm-mingw-1.811.0-webdl.exe"
 
 !packhdr "exehead.tmp" 'upx --best exehead.tmp'
 
@@ -28,4 +28,3 @@ OutFile "output\tdm-mingw-1.808.3-webdl.exe"
 !define PUBLISHER "TDM"
 
 !include "main.nsh"
-
