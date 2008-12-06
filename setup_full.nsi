@@ -10,8 +10,8 @@
 
 !define INNER_COMPONENTS "inner-manifest.txt"
 
-!define SETUP_VER "1.811.0"
-OutFile "output\tdm-mingw-1.811.0-f1.exe"
+!define SETUP_VER "1.812.0"
+OutFile "output\tdm-mingw-1.812.0-f1.exe"
 
 !packhdr "exehead.tmp" 'upx --best exehead.tmp'
 

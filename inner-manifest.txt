@@ -1,26 +1,25 @@
 <TDMInstallManifest>
 	<Category id="gcc" name="gcc">
 		<Description>The GNU Compiler Collection (Windows native)</Description>
-		<Version default="true" id="gcc-4.3.2-tdm-1" name="TDM Unstable: 4.3.2-tdm-1">
-			<Description>GCC 4.3.2 TDM-1: The most recent TDM release of the GCC
+		<Version default="true" id="gcc-4.3.2-tdm-2" name="TDM Unstable: 4.3.2-tdm-2">
+			<Description>GCC 4.3.2 TDM-2: The most recent TDM release of the GCC
 			 4.3 series, for MinGW</Description>
-			<Component base="gcc-core" name="core" id="gcc-core-4.3.2-tdm-1" unsize="15063832">
+			<Component base="gcc-core" name="core" id="gcc-core-4.3.2-tdm-2" unsize="15063832">
 				<Description>Required base files and C support</Description>
-				<Archive path="gcc-4.3.2-tdm-1-core.zip" arcsize="5343787" />
+				<Archive path="gcc-4.3.2-tdm-2-core.zip" arcsize="5343787" />
 			</Component>
-			<Component base="gcc-g++" name="g++" id="gcc-g++-4.3.2-tdm-1" unsize="17113954">
+			<Component base="gcc-g++" name="g++" id="gcc-g++-4.3.2-tdm-2" unsize="17113954">
 				<Description>C++ support</Description>
-				<Archive path="gcc-4.3.2-tdm-1-g++.tar.gz" arcsize="5484179" />
+				<Archive path="gcc-4.3.2-tdm-2-g++.tar.gz" arcsize="5484179" />
 			</Component>
 		</Version>
 	</Category>
 	<Component id="binutils" name="binutils">
 		<Description>GNU Binutils: required for creating executables, DLLs, or
 		 static libraries; includes other miscellaneous tools</Description>
-		<Version default="true" id="binutils-2.18.50-20080109-2" name="MinGW Unstable: 2.18.50-20080109-2" unsize="20452916">
-			<Description>Technology Preview -
-			 binutils-2.18.50-20080109-2</Description>
-			<Archive path="binutils-2.18.50-20080109-2.tar.gz" arcsize="8705583" />
+		<Version default="true" id="binutils-2.19-rc1" name="MinGW Unstable: 2.19-rc1" unsize="21577638">
+			<Description>Release Candidate - binutils-2.19-rc1</Description>
+			<Archive path="binutils-2.19-mingw32-rc1-bin.tar.gz" arcsize="8944043" />
 		</Version>
 	</Component>
 	<Component id="mingw-runtime" name="mingw-runtime">
@@ -34,9 +33,9 @@
 	<Component id="w32api" name="w32api">
 		<Description>Headers and import libraries for Microsoft's Win32
 		 API</Description>
-		<Version default="true" id="w32api-3.12" name="MinGW Stable: 3.12" unsize="14583803">
-			<Description>Current Release - w32api-3.12</Description>
-			<Archive path="w32api-3.12-mingw32-dev.tar.gz" arcsize="1643172" />
+		<Version default="true" id="w32api-3.13" name="MinGW Stable: 3.13" unsize="14411209">
+			<Description>Current Release - w32api-3.13</Description>
+			<Archive path="w32api-3.13-mingw32-dev.tar.gz" arcsize="1634605" />
 		</Version>
 	</Component>
 	<Component id="mingw32-make" name="mingw32-make">
@@ -54,11 +53,11 @@
 		</Version>
 	</Component>
 	<InstallType default="true" id="tdmrec" name="TDM-GCC Recommended, C/C++">
-		<Select id="gcc-core-4.3.2-tdm-1" />
-		<Select id="gcc-g++-4.3.2-tdm-1" />
-		<Select id="binutils-2.18.50-20080109-2" />
+		<Select id="gcc-core-4.3.2-tdm-2" />
+		<Select id="gcc-g++-4.3.2-tdm-2" />
+		<Select id="binutils-2.19-rc1" />
 		<Select id="mingw-runtime-3.14" />
-		<Select id="w32api-3.12" />
+		<Select id="w32api-3.13" />
 		<Select id="mingw32-make-3.81-20080326-3" />
 		<Select id="gdb-6.8-3" />
 	</InstallType>
