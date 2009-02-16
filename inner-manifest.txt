@@ -4,13 +4,13 @@
 		<Version default="true" id="gcc-4.3.3-tdm-1" name="TDM Unstable: 4.3.3-tdm-1">
 			<Description>GCC 4.3.3 TDM-1: The most recent TDM release of the GCC
 			 4.3 series, for MinGW</Description>
-			<Component base="gcc-core" name="core" id="gcc-core-4.3.3-tdm-1" unsize="15001569">
+			<Component base="gcc-core" name="core" id="gcc-core-4.3.3-tdm-1" unsize="15017289">
 				<Description>Required base files and C support</Description>
-				<Archive path="gcc-4.3.3-tdm-1-core.zip" arcsize="5317743" />
+				<Archive path="gcc-4.3.3-tdm-1-core.zip" arcsize="5320637" />
 			</Component>
-			<Component base="gcc-g++" name="g++" id="gcc-g++-4.3.3-tdm-1" unsize="17129826">
+			<Component base="gcc-g++" name="g++" id="gcc-g++-4.3.3-tdm-1" unsize="17142717">
 				<Description>C++ support</Description>
-				<Archive path="gcc-4.3.3-tdm-1-g++.tar.gz" arcsize="5484708" />
+				<Archive path="gcc-4.3.3-tdm-1-g++.tar.gz" arcsize="5485938" />
 			</Component>
 		</Version>
 	</Category>
