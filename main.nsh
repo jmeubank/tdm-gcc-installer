@@ -496,7 +496,7 @@ dlfile:
 	DetailPrint "Downloading '$apc_file'"
 	tdminstall::GetDownloadProgress /NOUNLOAD $ar_dl_index ; Pushes...
 	RealProgress::SetProgress /NOUNLOAD ; ...then pops.
-	${StrRep} $0 "$apc_path$apc_file" "+" "%2B"
+	${StrRep} $0 "$apc_path$apc_file" "+" "%252B"
 	Push "$dl_mirror$0"
 	Push "$apc_file"
 	Call DownloadArchive
