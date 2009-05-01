@@ -1,16 +1,16 @@
 <TDMInstallManifest>
 	<Category id="gcc" name="gcc">
 		<Description>The GNU Compiler Collection (Windows native)</Description>
-		<Version default="true" id="gcc-4.3.3-tdm-1" name="TDM Unstable: 4.3.3-tdm-1">
-			<Description>GCC 4.3.3 TDM-1: The most recent TDM release of the GCC
-			 4.3 series, for MinGW</Description>
-			<Component base="gcc-core" name="core" id="gcc-core-4.3.3-tdm-1" unsize="15017289">
+		<Version default="true" id="gcc-4.4.0-tdm-1" name="TDM Unstable: 4.4.0-tdm-1">
+			<Description>GCC 4.4.0 TDM-1: The most recent TDM release of the GCC
+			 4.4 series, for MinGW</Description>
+			<Component base="gcc-core" name="core" id="gcc-core-4.4.0-tdm-1" unsize="23370481">
 				<Description>Required base files and C support</Description>
-				<Archive path="gcc-4.3.3-tdm-1-core.zip" arcsize="5320637" />
+				<Archive path="gcc-4.4.0-tdm-1-core.zip" arcsize="7858055" />
 			</Component>
-			<Component base="gcc-g++" name="g++" id="gcc-g++-4.3.3-tdm-1" unsize="17142717">
+			<Component base="gcc-g++" name="g++" id="gcc-g++-4.4.0-tdm-1" unsize="17735011">
 				<Description>C++ support</Description>
-				<Archive path="gcc-4.3.3-tdm-1-g++.tar.gz" arcsize="5485938" />
+				<Archive path="gcc-4.4.0-tdm-1-g++.tar.gz" arcsize="5213976" />
 			</Component>
 		</Version>
 	</Category>
@@ -27,8 +27,7 @@
 		 with minimal GNU extensions</Description>
 		<Version default="true" id="mingw-runtime-3.15.2" name="MinGW Stable: 3.15.2" unsize="7391201">
 			<Description>Current Release - mingw-runtime-3.15.2</Description>
-			<Archive path="mingwrt-3.15.2-mingw32-dev.tar.gz" arcsize="562075" />
-			<Archive path="mingwrt-3.15.2-mingw32-dll.tar.gz" arcsize="4316" />
+			<Archive path="mingwrt-3.15.2-mingw32-dev.tar.gz" arcsize="565306" />
 		</Version>
 	</Component>
 	<Component id="w32api" name="w32api">
@@ -54,8 +53,8 @@
 		</Version>
 	</Component>
 	<InstallType default="true" id="tdmrec" name="TDM-GCC Recommended, C/C++">
-		<Select id="gcc-core-4.3.3-tdm-1" />
-		<Select id="gcc-g++-4.3.3-tdm-1" />
+		<Select id="gcc-core-4.4.0-tdm-1" />
+		<Select id="gcc-g++-4.4.0-tdm-1" />
 		<Select id="binutils-2.19.1" />
 		<Select id="mingw-runtime-3.15.2" />
 		<Select id="w32api-3.13" />
