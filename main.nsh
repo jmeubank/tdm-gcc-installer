@@ -184,18 +184,28 @@ Section "Install Components" SEC_INSTALL_COMPONENTS
 			ReadRegStr $0 HKLM \
 			 "SYSTEM\CurrentControlSet\Control\Session Manager\Environment" \
 			 "Path"
+			StrCpy $1 0
 			${If} $0 != ""
+				tdminstall::StringInString /NOUNLOAD "$instdir\bin" "$0"
+				Pop $1
 				StrCpy $0 "$0;"
 			${EndIf}
-			WriteRegExpandStr HKLM \
-			 "SYSTEM\CurrentControlSet\Control\Session Manager\Environment" \
-			 "Path" "$0$inst_dir\bin"
+			${If} "$1" != 1
+				WriteRegExpandStr HKLM \
+				 "SYSTEM\CurrentControlSet\Control\Session Manager\Environment" \
+				 "Path" "$0$inst_dir\bin"
+			${EndIf}
 		${Else}
 			ReadRegStr $0 HKCU "Environment" "Path"
+			StrCpy $1 0
 			${If} $0 != ""
+				tdminstall::StringInString /NOUNLOAD "$instdir\bin" "$0"
+				Pop $1
 				StrCpy $0 "$0;"
 			${EndIf}
-			WriteRegExpandStr HKCU "Environment" "Path" "$0$inst_dir\bin"
+			${If} "$1" != 1
+				WriteRegExpandStr HKCU "Environment" "Path" "$0$inst_dir\bin"
+			${EndIf}
 		${EndIf}
 		tdminstall::BroadcastEnvChange /NOUNLOAD
 	${EndIf}

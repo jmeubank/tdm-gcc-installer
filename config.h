@@ -18,7 +18,7 @@ this file freely.
 
 #define STR_SHORTNAME "TDM/MinGW"
 
-#define STR_SETUP_VER "1.902.0"
+#define STR_SETUP_VER "1.905.0"
 
 
 #endif // CONFIG_H_INC
