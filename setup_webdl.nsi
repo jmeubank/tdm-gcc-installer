@@ -9,8 +9,8 @@
 
 
 
-!define SETUP_VER "1.905.0"
-OutFile "output\tdm-mingw-1.905.0-webdl.exe"
+!define SETUP_VER "1.908.0"
+OutFile "output\tdm-mingw-1.908.0-webdl.exe"
 
 !packhdr "exehead.tmp" 'upx --best exehead.tmp'
 
