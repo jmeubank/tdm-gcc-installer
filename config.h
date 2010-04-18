@@ -18,7 +18,7 @@ this file freely.
 
 #define STR_SHORTNAME "TDM/MinGW"
 
-#define STR_SETUP_VER "1.908.0"
+#define STR_SETUP_VER "1.1004.0"
 
 
 #endif // CONFIG_H_INC

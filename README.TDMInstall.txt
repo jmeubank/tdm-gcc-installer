@@ -65,7 +65,7 @@ the public domain, subject to the following text:
    DISCLAIMER:
    The author(s) of this file's contents release it into the public domain,
    without express or implied warranty of any kind. You may use, modify, and
-   redistributethis file freely.
+   redistribute this file freely.
 
 The source files in the "7z" subdirectory are licensed under the GNU LGPL. See
 7z/MODIFIED_LZMA.txt and 7z/LGPL.txt for details.

@@ -40,6 +40,7 @@ extern "C" {
 #include "config.h"
 
 
+typedef char CharType;
 typedef std::string StringType;
 typedef RefType< TiXmlDocument >::Ref TiXmlDocumentRef;
 
@@ -1623,16 +1624,148 @@ extern "C" void __declspec(dllexport) RegisterInnerArchive
 }
 
 
-extern "C" void __declspec(dllexport) BroadcastEnvChange
+extern "C" void __declspec(dllexport) EnsureInPathEnv
 (HWND hwndParent,
  int string_size,
  char *variables,
  stack_t **stacktop,
  extra_parameters *extra)
 {
-	DWORD dwReturnValue;
-	SendMessageTimeout(HWND_BROADCAST, WM_SETTINGCHANGE, 0,
-	 (LPARAM)"Environment", SMTO_ABORTIFHUNG, 5000, &dwReturnValue);
+	NSIS::UpdateParams(string_size, variables, stacktop, extra);
+
+	StringType mui_mode = NSIS::popstring();
+	StringType path = NSIS::popstring();
+
+	StringType ret = "OK";
+
+	do
+	{
+		HKEY base_key = HKEY_CURRENT_USER;
+		const char* base_path = "Environment";
+		if (mui_mode == "AllUsers")
+		{
+			base_key = HKEY_LOCAL_MACHINE;
+			base_path = "SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment";
+		}
+		HKEY this_key;
+		if (RegOpenKeyEx(base_key, base_path, 0, KEY_READ, &this_key)
+		 != ERROR_SUCCESS)
+		{
+			ret = "Failed to open PATH setting in registry";
+			break;
+		}
+		DWORD value_size = 0;
+		if (RegQueryValueEx(this_key, "Path", 0, 0, 0, &value_size)
+		 != ERROR_SUCCESS)
+		{
+			ret = "Failed to query length of PATH variable in registry";
+			break;
+		}
+		TCHAR value_buf[value_size + 1];
+		if (RegQueryValueEx(this_key, "Path", 0, 0, (BYTE*)value_buf,
+		 &value_size) != ERROR_SUCCESS)
+		{
+			ret = "Failed to retrieve PATH setting from registry";
+			break;
+		}
+		value_buf[value_size] = 0;
+		StringType current_path = value_buf;
+		if (current_path.find(path) != StringType::npos)
+			break;
+		if (current_path.length() <= 0)
+			current_path += ";";
+		current_path += path;
+		HKEY write_key;
+		if (RegCreateKeyEx(base_key, base_path, 0, 0, 0, KEY_WRITE, 0,
+		 &write_key, 0) != ERROR_SUCCESS)
+		{
+			ret = "Failed to open PATH registry setting with write privileges";
+			break;
+		}
+		if (RegSetValueEx(write_key, "Path", 0, REG_EXPAND_SZ,
+		 (const BYTE*)current_path.c_str(),
+		 (current_path.length() + 1) * sizeof(CharType))
+		  != ERROR_SUCCESS)
+		{
+			ret = "Failed to write new PATH setting to registry";
+			break;
+		}
+		DWORD dwReturnValue;
+		SendMessageTimeout(HWND_BROADCAST, WM_SETTINGCHANGE, 0,
+		 (LPARAM)"Environment", SMTO_ABORTIFHUNG, 5000, &dwReturnValue);
+	} while (false);
+
+	NSIS::pushstring(ret.c_str());
+}
+
+
+extern "C" void __declspec(dllexport) EnsureNotInPathEnv
+(HWND hwndParent,
+ int string_size,
+ char *variables,
+ stack_t **stacktop,
+ extra_parameters *extra)
+{
+	NSIS::UpdateParams(string_size, variables, stacktop, extra);
+
+	StringType path = NSIS::popstring();
+
+	typedef std::list< std::pair< HKEY, const char* > > HivesList;
+	HivesList hives;
+	hives.push_back(std::pair< HKEY, const char* >(HKEY_CURRENT_USER, "Environment"));
+	hives.push_back(std::pair< HKEY, const char* >(HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment"));
+
+	bool changes = false;
+	for (HivesList::iterator it = hives.begin(); it != hives.end(); ++it)
+	{
+		HKEY this_key;
+		if (RegOpenKeyEx(it->first, it->second, 0, KEY_READ, &this_key)
+		 != ERROR_SUCCESS)
+			continue;
+		DWORD value_size = 0;
+		if (RegQueryValueEx(this_key, "Path", 0, 0, 0, &value_size)
+		 != ERROR_SUCCESS)
+			continue;
+		TCHAR value_buf[value_size + 1];
+		if (RegQueryValueEx(this_key, "Path", 0, 0, (BYTE*)value_buf,
+		 &value_size) != ERROR_SUCCESS)
+			continue;
+		value_buf[value_size] = 0;
+		StringType current_path = value_buf;
+		StringType::size_type fd;
+		while ((fd = current_path.find(path)) != StringType::npos)
+		{
+			changes = true;
+			if ((fd = current_path.find(path + ";")) != StringType::npos)
+			{
+				current_path.erase(fd, path.length() + 1);
+				continue;
+			}
+			if ((fd = current_path.find(StringType(";") + path)) != StringType::npos)
+			{
+				current_path.erase(fd, path.length() + 1);
+				continue;
+			}
+			fd = current_path.find(path);
+			current_path.erase(fd, path.length());
+		}
+		HKEY write_key;
+		if (RegCreateKeyEx(it->first, it->second, 0, 0, 0, KEY_WRITE, 0,
+		 &write_key, 0) != ERROR_SUCCESS)
+			continue;
+		if (RegSetValueEx(write_key, "Path", 0, REG_EXPAND_SZ,
+		 (const BYTE*)current_path.c_str(),
+		 (current_path.length() + 1) * sizeof(CharType))
+		  != ERROR_SUCCESS)
+			continue;
+	}
+
+	if (changes)
+	{
+		DWORD dwReturnValue;
+		SendMessageTimeout(HWND_BROADCAST, WM_SETTINGCHANGE, 0,
+		 (LPARAM)"Environment", SMTO_ABORTIFHUNG, 5000, &dwReturnValue);
+	}
 }
 
 

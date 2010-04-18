@@ -128,8 +128,7 @@ Section "Install Components" SEC_INSTALL_COMPONENTS
 
 	; Unpack any inner archives
 !ifdef INNER_COMPONENTS
-!system 'ctemplate "${INNER_COMPONENTS}" arcout.template.txt > arcout.nsh' \
- = 0
+!system 'ctemplate "${INNER_COMPONENTS}" arcout.template.txt > arcout.nsh' = 0
 !include arcout.nsh
 !endif
 
@@ -180,34 +179,13 @@ Section "Install Components" SEC_INSTALL_COMPONENTS
 	Pop $0
 	${If} $0 == 1
 		DetailPrint "Adding '$inst_dir\bin' to PATH"
-		${If} "$MultiUser.InstallMode" == "AllUsers"
-			ReadRegStr $0 HKLM \
-			 "SYSTEM\CurrentControlSet\Control\Session Manager\Environment" \
-			 "Path"
-			StrCpy $1 0
-			${If} $0 != ""
-				tdminstall::StringInString /NOUNLOAD "$instdir\bin" "$0"
-				Pop $1
-				StrCpy $0 "$0;"
-			${EndIf}
-			${If} "$1" != 1
-				WriteRegExpandStr HKLM \
-				 "SYSTEM\CurrentControlSet\Control\Session Manager\Environment" \
-				 "Path" "$0$inst_dir\bin"
-			${EndIf}
-		${Else}
-			ReadRegStr $0 HKCU "Environment" "Path"
-			StrCpy $1 0
-			${If} $0 != ""
-				tdminstall::StringInString /NOUNLOAD "$instdir\bin" "$0"
-				Pop $1
-				StrCpy $0 "$0;"
-			${EndIf}
-			${If} "$1" != 1
-				WriteRegExpandStr HKCU "Environment" "Path" "$0$inst_dir\bin"
-			${EndIf}
+		tdminstall::EnsureInPathEnv /NOUNLOAD "$inst_dir\bin" \
+		 "$MultiUser.InstallMode"
+		Pop $1
+		${If} "$1" != "OK"
+			DetailPrint "$1"
+			Goto onerror
 		${EndIf}
-		tdminstall::BroadcastEnvChange /NOUNLOAD
 	${EndIf}
 
 	; Add/Remove Programs entry
@@ -310,29 +288,7 @@ Section "un.Uninstall"
 			${EndIf}
 		${EndIf}
 		DetailPrint "Removing any instances of '$uninst\bin' from PATH"
-		${If} "$MultiUser.InstallMode" == "AllUsers"
-			ReadRegStr $0 HKLM \
-			 "SYSTEM\CurrentControlSet\Control\Session Manager\Environment" \
-			 "Path"
-			${If} $0 != ""
-				Push "$0"
-				Push "$uninst\bin"
-				Call un.RemovePathEntry
-				Pop $0
-				WriteRegExpandStr HKLM \
-				 "SYSTEM\CurrentControlSet\Control\Session Manager\Environment" \
-				 "Path" "$0"
-			${EndIf}
-		${EndIf}
-		ReadRegStr $0 HKCU "Environment" "Path"
-		${If} $0 != ""
-			Push "$0"
-			Push "$uninst\bin"
-			Call un.RemovePathEntry
-			Pop $0
-			WriteRegExpandStr HKCU "Environment" "Path" "$0"
-		${EndIf}
-		tdminstall::BroadcastEnvChange /NOUNLOAD
+		tdminstall::EnsureNotInPathEnv /NOUNLOAD "$uninst\bin"
 		ReadRegStr $0 SHELL_CONTEXT \
 		 "Software\Microsoft\Windows\CurrentVersion\Uninstall\${UNINSTKEY}" \
 		 "UninstallString"
@@ -363,41 +319,6 @@ onerrorun:
 uninstend:
 	RealProgress::SetProgress /NOUNLOAD 100
 SectionEnd
-
-Function un.RemovePathEntry
-	Var /GLOBAL rpe_full
-	Var /GLOBAL rpe_entry
-	Pop $rpe_entry
-	Pop $rpe_full
-	Push $R1
-	Push $R2
-
-	StrCpy $R2 ""
-	${UnStrLoc} $R1 "$rpe_full" "$rpe_entry;" ">"
-	${While} $R1 != ""
-		StrCpy $R2 1
-		${UnStrRep} $rpe_full "$rpe_full" "$rpe_entry;" ""
-		${UnStrLoc} $R1 "$rpe_full" "$rpe_entry;" ">"
-	${EndWhile}
-	${UnStrLoc} $R1 "$rpe_full" ";$rpe_entry" ">"
-	${While} $R1 != ""
-		StrCpy $R2 1
-		${UnStrRep} $rpe_full "$rpe_full" ";$rpe_entry" ""
-		${UnStrLoc} $R1 "$rpe_full" ";$rpe_entry" ">"
-	${EndWhile}
-	${If} $R2 != ""
-		${UnStrLoc} $R1 "$rpe_full" "$rpe_entry" ">"
-		${While} $R1 != ""
-			StrCpy $R2 1
-			${UnStrRep} $rpe_full "$rpe_full" "$rpe_entry" ""
-			${UnStrLoc} $R1 "$rpe_full" "$rpe_entry" ">"
-		${EndWhile}
-	${EndIf}
-
-	Pop $R2
-	Pop $R1
-	Push $rpe_full
-FunctionEnd
 
 
 ;;; Special functions
