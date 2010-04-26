@@ -9,12 +9,14 @@ SETUPEXEWEBDL = output/tdm-mingw-1.1004.0webdl.exe
 TDMINSTDLL = plugins/tdminstall.dll
 
 
-CC = mingw32-gcc
-CFLAGS = -Wall -Os -I. -Ibzip2 -Izlib
-CXX = mingw32-g++
-CXXFLAGS = -Wall -Os -I. -Ibzip2 -Izlib
-LD = mingw32-g++
-LDFLAGS = -s
+CC = gcc
+CFLAGS = -Wall -Os -I. -Ibzip2 -Izlib -m32
+CXX = g++
+CXXFLAGS = -Wall -Os -I. -Ibzip2 -Izlib -m32
+LD = g++
+LDFLAGS = -s -m32
+RC = windres
+RCFLAGS = -F pe-i386
 
 
 .PHONY: all
@@ -38,18 +40,19 @@ ctemplate.exe: ctemplate.o $(TINYXMLSOURCES)
 
 TDMINSTDLLSOURCES = \
   $(TINYXMLSOURCES) \
-  7z/Archive/7z/7zAlloc.o \
-  7z/Archive/7z/7zBuffer.o \
-  7z/Archive/7z/7zDecode.o \
-  7z/Archive/7z/7zExtract.o \
-  7z/Archive/7z/7zHeader.o \
-  7z/Archive/7z/7zIn.o \
-  7z/Archive/7z/7zItem.o \
-  7z/Compress/Branch/BranchX86.o \
-  7z/Compress/Branch/BranchX86_2.o \
-  7z/Compress/Lzma/LzmaDecode.o \
+  7z/Util/7z/7zAlloc.o \
+  7z/7zBuf.o \
   7z/7zCrc.o \
-  7z/Alloc.o \
+  7z/7zCrcOpt.o \
+  7z/7zDec.o \
+  7z/7zFile.o \
+  7z/7zIn.o \
+  7z/7zStream.o \
+  7z/Bcj2.o \
+  7z/Bra86.o \
+  7z/CpuArch.o \
+  7z/LzmaDec.o \
+  7z/Lzma2Dec.o \
   bzip2/bzlib.o \
   bzip2/crctable.o \
   bzip2/decompress.o \
@@ -73,6 +76,7 @@ TDMINSTDLLSOURCES = \
   componentstree.o \
   install_manifest.o \
   multiread.o \
+  multiread_lzma.o \
   nsis_interface.o \
   tdminst_res.o \
   tdminstall.o \
@@ -83,4 +87,4 @@ $(TDMINSTDLL): $(TDMINSTDLLSOURCES)
 	 -lgdi32 -lcomctl32
 
 tdminst_res.o: tdminst_res.rc tdminst_res.h
-	windres tdminst_res.rc tdminst_res.o
+	$(RC) $(RCFLAGS) tdminst_res.rc tdminst_res.o

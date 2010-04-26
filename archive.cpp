@@ -33,7 +33,8 @@ enum ArcType
 	ARCT_TAR_GZ,
 	ARCT_TAR_BZ2,
 	ARCT_ZIP,
-	ARCT_7Z
+	ARCT_7Z,
+	ARCT_TAR_LZMA
 };
 
 
@@ -142,6 +143,9 @@ std::string InstallArchive
 	 || HasExtension(archive, ".tbz")
 	 || HasExtension(archive, ".tbz2"))
 		type = ARCT_TAR_BZ2;
+	else if (HasExtension(archive, ".tar.lzma")
+	 || HasExtension(archive, ".tlz"))
+		type = ARCT_TAR_LZMA;
 	else if (HasExtension(archive, ".zip"))
 		type = ARCT_ZIP;
 	else if (HasExtension(archive, ".7z"))
@@ -184,6 +188,28 @@ std::string InstallArchive
 			if (!mr)
 			{
 				return std::string("bzip2 failed to open file '") + archive +
+				 "'";
+			}
+			int res = tar(RefGetPtr(mr), base, ArcBeforeCallback,
+			 ArcCreateCallback);
+			if (res != 0)
+			{
+				const char* emsg = "cancelled from callback";
+				if (res == -1)
+					emsg = archive_geterror();
+				return std::string("tar failed to untar file '") + archive +
+				 "': " + emsg;
+			}
+		}
+		break;
+	case ARCT_TAR_LZMA:
+		{
+			// Create lzma reader and use the tar function to unpack
+			RefType< MultiReader >::Ref mr(CreateLZMAReader(archive.c_str()),
+			 DestroyMultiReader);
+			if (!mr)
+			{
+				return std::string("lzma failed to open file '") + archive +
 				 "'";
 			}
 			int res = tar(RefGetPtr(mr), base, ArcBeforeCallback,

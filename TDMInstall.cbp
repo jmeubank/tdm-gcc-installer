@@ -40,88 +40,59 @@
 			<Add library="comctl32" />
 			<Add directory="$(#tinyxml)" />
 		</Linker>
+		<Unit filename="7z\7zBuf.c">
+			<Option compilerVar="CC" />
+			<Option target="tdminstall-dll" />
+		</Unit>
 		<Unit filename="7z\7zCrc.c">
 			<Option compilerVar="CC" />
 			<Option target="tdminstall-dll" />
 		</Unit>
-		<Unit filename="7z\Alloc.c">
+		<Unit filename="7z\7zCrcOpt.c">
 			<Option compilerVar="CC" />
 			<Option target="tdminstall-dll" />
 		</Unit>
-		<Unit filename="7z\Alloc.h">
-			<Option target="tdminstall-dll" />
-		</Unit>
-		<Unit filename="7z\Archive\7z\7zAlloc.c">
+		<Unit filename="7z\7zDec.c">
 			<Option compilerVar="CC" />
 			<Option target="tdminstall-dll" />
 		</Unit>
-		<Unit filename="7z\Archive\7z\7zAlloc.h">
-			<Option target="tdminstall-dll" />
-		</Unit>
-		<Unit filename="7z\Archive\7z\7zBuffer.c">
+		<Unit filename="7z\7zFile.c">
 			<Option compilerVar="CC" />
 			<Option target="tdminstall-dll" />
 		</Unit>
-		<Unit filename="7z\Archive\7z\7zBuffer.h">
-			<Option target="tdminstall-dll" />
-		</Unit>
-		<Unit filename="7z\Archive\7z\7zDecode.c">
+		<Unit filename="7z\7zIn.c">
 			<Option compilerVar="CC" />
 			<Option target="tdminstall-dll" />
 		</Unit>
-		<Unit filename="7z\Archive\7z\7zDecode.h">
-			<Option target="tdminstall-dll" />
-		</Unit>
-		<Unit filename="7z\Archive\7z\7zExtract.c">
+		<Unit filename="7z\7zStream.c">
 			<Option compilerVar="CC" />
 			<Option target="tdminstall-dll" />
 		</Unit>
-		<Unit filename="7z\Archive\7z\7zExtract.h">
-			<Option target="tdminstall-dll" />
-		</Unit>
-		<Unit filename="7z\Archive\7z\7zHeader.c">
+		<Unit filename="7z\Bcj2.c">
 			<Option compilerVar="CC" />
 			<Option target="tdminstall-dll" />
 		</Unit>
-		<Unit filename="7z\Archive\7z\7zHeader.h">
-			<Option target="tdminstall-dll" />
-		</Unit>
-		<Unit filename="7z\Archive\7z\7zIn.c">
+		<Unit filename="7z\Bra86.c">
 			<Option compilerVar="CC" />
 			<Option target="tdminstall-dll" />
 		</Unit>
-		<Unit filename="7z\Archive\7z\7zItem.c">
+		<Unit filename="7z\CpuArch.c">
 			<Option compilerVar="CC" />
 			<Option target="tdminstall-dll" />
 		</Unit>
-		<Unit filename="7z\Archive\7z\7zItem.h">
-			<Option target="tdminstall-dll" />
-		</Unit>
-		<Unit filename="7z\Compress\Branch\BranchX86.c">
+		<Unit filename="7z\Lzma2Dec.c">
 			<Option compilerVar="CC" />
 			<Option target="tdminstall-dll" />
 		</Unit>
-		<Unit filename="7z\Compress\Branch\BranchX86.h">
-			<Option target="tdminstall-dll" />
-		</Unit>
-		<Unit filename="7z\Compress\Branch\BranchX86_2.c">
+		<Unit filename="7z\LzmaDec.c">
 			<Option compilerVar="CC" />
 			<Option target="tdminstall-dll" />
 		</Unit>
-		<Unit filename="7z\Compress\Branch\BranchX86_2.h">
+		<Unit filename="7z\README.txt">
 			<Option target="tdminstall-dll" />
 		</Unit>
-		<Unit filename="7z\Compress\Lzma\LzmaDecode.c">
+		<Unit filename="7z\Util\7z\7zAlloc.c">
 			<Option compilerVar="CC" />
-			<Option target="tdminstall-dll" />
-		</Unit>
-		<Unit filename="7z\Compress\Lzma\LzmaDecode.h">
-			<Option target="tdminstall-dll" />
-		</Unit>
-		<Unit filename="7z\LGPL.txt">
-			<Option target="tdminstall-dll" />
-		</Unit>
-		<Unit filename="7z\MODIFIED_LZMA.txt">
 			<Option target="tdminstall-dll" />
 		</Unit>
 		<Unit filename="Makefile">
@@ -214,6 +185,10 @@
 			<Option target="tdminstall-dll" />
 		</Unit>
 		<Unit filename="multiread.h">
+			<Option target="tdminstall-dll" />
+		</Unit>
+		<Unit filename="multiread_lzma.c">
+			<Option compilerVar="CC" />
 			<Option target="tdminstall-dll" />
 		</Unit>
 		<Unit filename="nsis_interface.cpp">

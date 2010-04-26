@@ -19,11 +19,18 @@ this file freely.
 #include "bzlib.h"
 
 
+struct LZMAFile* CreateLZMAFile(const char*);
+void DestroyLZMAFile(struct LZMAFile*);
+int ReadLZMAFile(struct LZMAFile*, void*, unsigned);
+const char* LZMAFileError(struct LZMAFile*, int*);
+
+
 enum
 {
 	MRT_UNDEF = 0,
 	MRT_GZ = 1,
-	MRT_BZ2 = 2
+	MRT_BZ2 = 2,
+	MRT_LZMA = 3
 };
 
 
@@ -38,6 +45,7 @@ struct _MultiReader
 			FILE* filep;
 			BZFILE* bzfilep;
 		} bz2;
+		struct LZMAFile* lzma;
 	} file;
 };
 
@@ -79,6 +87,20 @@ MultiReader* CreateBZ2Reader(const char *file)
 }
 
 
+MultiReader* CreateLZMAReader(const char* file)
+{
+	MultiReader* mr = malloc(sizeof(MultiReader));
+	mr->type = MRT_LZMA;
+	mr->file.lzma = CreateLZMAFile(file);
+	if (!mr->file.lzma)
+	{
+		free(mr);
+		return 0;
+	}
+	return mr;
+}
+
+
 void DestroyMultiReader(MultiReader *mr)
 {
 	if (!mr)
@@ -97,6 +119,9 @@ void DestroyMultiReader(MultiReader *mr)
 			if (mr->file.bz2.filep)
 				fclose(mr->file.bz2.filep);
 		}
+		break;
+	case MRT_LZMA:
+		DestroyLZMAFile(mr->file.lzma);
 		break;
 	default:
 		break;
@@ -123,6 +148,8 @@ int MultiRead(MultiReader *mr, void *buf, unsigned len)
 				return 0;
 			return -1;
 		}
+	case MRT_LZMA:
+		return ReadLZMAFile(mr->file.lzma, buf, len);
 	default:
 		break;
 	}
@@ -140,6 +167,8 @@ const char *MultiError(MultiReader *mr, int *errnum)
 		return gzerror(mr->file.gz, errnum);
 	case MRT_BZ2:
 		return BZ2_bzerror(mr->file.bz2.bzfilep, errnum);
+	case MRT_LZMA:
+		return LZMAFileError(mr->file.lzma, errnum);
 	default:
 		break;
 	}

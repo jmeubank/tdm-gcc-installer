@@ -742,6 +742,7 @@ static void RemoveEntry(const char* base, const char* entry)
 	int flen = strlen(ent);
 	if (ent[flen - 1] != '/' && ent[flen - 1] != '\\')
 	{
+		chmod(ent, _S_IREAD | _S_IWRITE);
 		int ret = remove(ent);
 		if (ret != 0 && ret != ENOENT)
 			return;
@@ -1624,6 +1625,33 @@ extern "C" void __declspec(dllexport) RegisterInnerArchive
 }
 
 
+enum WOW64CheckStatus
+{
+	CHECK,
+	SYS32,
+	SYS64
+};
+
+static REGSAM MaybeWOW64Flag()
+{
+	static WOW64CheckStatus status = CHECK;
+	if (status == CHECK)
+	{
+		FARPROC IsWow64Process_p = GetProcAddress(GetModuleHandle("kernel32"), "IsWow64Process");
+		if (IsWow64Process_p)
+		{
+			BOOL wow64_out = TRUE;
+			typedef void (WINAPI *IsWow64ProcessFunc)(HANDLE, PBOOL);
+			((IsWow64ProcessFunc)IsWow64Process_p)(GetCurrentProcess(), &wow64_out);
+			status = (wow64_out) ? SYS64 : SYS32;
+		}
+		else
+			status = SYS32;
+	}
+	return (status == SYS64) ? 0x0100 : 0; // 0x0100 is KEY_WOW64_64KEY
+}
+
+
 extern "C" void __declspec(dllexport) EnsureInPathEnv
 (HWND hwndParent,
  int string_size,
@@ -1633,8 +1661,8 @@ extern "C" void __declspec(dllexport) EnsureInPathEnv
 {
 	NSIS::UpdateParams(string_size, variables, stacktop, extra);
 
-	StringType mui_mode = NSIS::popstring();
 	StringType path = NSIS::popstring();
+	StringType mui_mode = NSIS::popstring();
 
 	StringType ret = "OK";
 
@@ -1648,8 +1676,8 @@ extern "C" void __declspec(dllexport) EnsureInPathEnv
 			base_path = "SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment";
 		}
 		HKEY this_key;
-		if (RegOpenKeyEx(base_key, base_path, 0, KEY_READ, &this_key)
-		 != ERROR_SUCCESS)
+		if (RegOpenKeyEx(base_key, base_path, 0, MaybeWOW64Flag() | KEY_READ,
+		 &this_key) != ERROR_SUCCESS)
 		{
 			ret = "Failed to open PATH setting in registry";
 			break;
@@ -1672,12 +1700,12 @@ extern "C" void __declspec(dllexport) EnsureInPathEnv
 		StringType current_path = value_buf;
 		if (current_path.find(path) != StringType::npos)
 			break;
-		if (current_path.length() <= 0)
+		if (current_path.length() > 0)
 			current_path += ";";
 		current_path += path;
 		HKEY write_key;
-		if (RegCreateKeyEx(base_key, base_path, 0, 0, 0, KEY_WRITE, 0,
-		 &write_key, 0) != ERROR_SUCCESS)
+		if (RegCreateKeyEx(base_key, base_path, 0, 0, 0,
+		 MaybeWOW64Flag() | KEY_WRITE, 0, &write_key, 0) != ERROR_SUCCESS)
 		{
 			ret = "Failed to open PATH registry setting with write privileges";
 			break;
@@ -1719,8 +1747,8 @@ extern "C" void __declspec(dllexport) EnsureNotInPathEnv
 	for (HivesList::iterator it = hives.begin(); it != hives.end(); ++it)
 	{
 		HKEY this_key;
-		if (RegOpenKeyEx(it->first, it->second, 0, KEY_READ, &this_key)
-		 != ERROR_SUCCESS)
+		if (RegOpenKeyEx(it->first, it->second, 0, MaybeWOW64Flag() | KEY_READ,
+		 &this_key) != ERROR_SUCCESS)
 			continue;
 		DWORD value_size = 0;
 		if (RegQueryValueEx(this_key, "Path", 0, 0, 0, &value_size)
@@ -1750,8 +1778,8 @@ extern "C" void __declspec(dllexport) EnsureNotInPathEnv
 			current_path.erase(fd, path.length());
 		}
 		HKEY write_key;
-		if (RegCreateKeyEx(it->first, it->second, 0, 0, 0, KEY_WRITE, 0,
-		 &write_key, 0) != ERROR_SUCCESS)
+		if (RegCreateKeyEx(it->first, it->second, 0, 0, 0,
+		 MaybeWOW64Flag() | KEY_WRITE, 0, &write_key, 0) != ERROR_SUCCESS)
 			continue;
 		if (RegSetValueEx(write_key, "Path", 0, REG_EXPAND_SZ,
 		 (const BYTE*)current_path.c_str(),

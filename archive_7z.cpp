@@ -17,65 +17,46 @@ this file freely.
 #include "ref.hpp"
 extern "C" {
 #include <sys/stat.h>
+#include "7z/7z.h"
+#include "7z/7zFile.h"
 #include "7z/7zCrc.h"
-#include "7z/Archive/7z/7zIn.h"
-#include "7z/Archive/7z/7zExtract.h"
+#include "7z/Util/7z/7zAlloc.h"
 #include "archive_base.h"
 }
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
 
-extern "C"
-{
-
-typedef struct
-{
-	ISzInStream sz_stream;
-	FILE* filep;
-} FileInStream;
-
-static SZ_RESULT SzFileReadImp
- (void *object,
-  void *buffer,
-  size_t size,
-  size_t *processedSize)
-{
-	FileInStream* f = (FileInStream*)object;
-	int read = fread(buffer, 1, size, f->filep);
-	if (processedSize)
-		*processedSize = read;
-	else if (read <= 0)
-		return SZE_FAIL;
-	return SZ_OK;
-}
-
-static SZ_RESULT SzFileSeekImp(void *object, CFileSize pos)
-{
-	FileInStream* f = (FileInStream*)object;
-	int res = fseek(f->filep, (long)pos, SEEK_SET);
-	if (res == 0)
-		return SZ_OK;
-	return SZE_FAIL;
-}
-
-} // extern "C"
-
-
 extern int num_files_in_cur_op;
 extern int cur_file_in_op_index;
 
 
-static void SzArDbExDeleter(CArchiveDatabaseEx* db)
+static void FileCloser(CFileInStream* instream)
 {
-	SzArDbExFree(db, SzFree);
+	File_Close(&instream->file);
 }
 
-
-static void OutBufferDeleter(Byte* ob)
+struct DBDeleter
 {
-	if (ob)
-		SzFree(ob);
+	ISzAlloc* alloc_imp;
+	DBDeleter(ISzAlloc* aimp) : alloc_imp(aimp) {}
+	void operator () (CSzArEx* db) { SzArEx_Free(db, alloc_imp); }
+};
+
+struct OutBufDeleter
+{
+	ISzAlloc* alloc_imp;
+	OutBufDeleter(ISzAlloc* aimp) : alloc_imp(aimp) {}
+	void operator () (Byte** outbuf)
+	{
+		if (*outbuf)
+			IAlloc_Free(alloc_imp, *outbuf);
+	}
+};
+
+void UInt16ArrayDeleter(UInt16* del)
+{
+	delete[] del;
 }
 
 
@@ -85,22 +66,21 @@ int un7z
   int (*before_entry_callback)(const char*, int),
   void (*create_callback)(const char*, int))
 {
-	FileInStream instream;
-	instream.sz_stream.Read = SzFileReadImp;
-	instream.sz_stream.Seek = SzFileSeekImp;
-	instream.filep = fopen(file, "rb");
-	if (!instream.filep)
+	CFileInStream instream;
+	if (InFile_Open(&instream.file, file))
 	{
 		archive_seterror("failed to open file '%s' for reading", file);
 		return -1;
 	}
-	RefType< FILE >::Ref fcloser(instream.filep, fclose);
+	RefType< CFileInStream >::Ref fcloser(&instream, FileCloser);
+	FileInStream_CreateVTable(&instream);
+
+	CLookToRead lookstream;
+	LookToRead_CreateVTable(&lookstream, False);
+	lookstream.realStream = &instream.s;
+	LookToRead_Init(&lookstream);
 
 	CrcGenerateTable();
-
-	CArchiveDatabaseEx db;
-	SzArDbExInit(&db);
-	RefType< CArchiveDatabaseEx >::Ref db_deleter(&db, SzArDbExDeleter);
 
 	ISzAlloc allocImp, allocTempImp;
 	allocImp.Alloc = SzAlloc;
@@ -108,37 +88,53 @@ int un7z
 	allocTempImp.Alloc = SzAllocTemp;
 	allocTempImp.Free = SzFreeTemp;
 
-	if (SzArchiveOpen(&instream.sz_stream, &db, &allocImp, &allocTempImp)
-	 != SZ_OK)
+	CSzArEx db;
+	SzArEx_Init(&db);
+
+	if (SzArEx_Open(&db, &lookstream.s, &allocImp, &allocTempImp) != SZ_OK)
 	{
 		archive_seterror("7zlib couldn't open '%s' as a 7z archive", file);
 		return -1;
 	}
+	RefType< CSzArEx >::Ref db_deleter(&db, DBDeleter(&allocImp));
 
-	num_files_in_cur_op = db.Database.NumFiles;
+	num_files_in_cur_op = db.db.NumFiles;
 
 	UInt32 blockIndex = 0xFFFFFFFF; /* it can have any value before first call (if outBuffer = 0) */
 	Byte *outBuffer = 0; /* it must be 0 before first call for each new archive. */
 	size_t outBufferSize = 0;  /* it can have any value before first call (if outBuffer = 0) */
-	RefType< Byte >::Ref outbuf_deleter(outBuffer, OutBufferDeleter);
-	for (unsigned i = 0; i < db.Database.NumFiles; i++)
+	RefType< Byte* >::Ref outbuf_deleter(&outBuffer, OutBufDeleter(&allocImp));
+
+	for (unsigned i = 0; i < db.db.NumFiles; ++i)
 	{
 		cur_file_in_op_index = i;
-		CFileItem* cur_file = &db.Database.Files[i];
+		const CSzFileItem* cur_file = &db.db.Files[i];
+
+		size_t len16 = SzArEx_GetFileNameUtf16(&db, i, 0);
+		UInt16 name16[len16 + 1];
+		SzArEx_GetFileNameUtf16(&db, i, name16);
+		char name8[len16 * 3 + 100];
+		char defaultChar = '_';
+		BOOL defUsed;
+		int numChars = WideCharToMultiByte(CP_OEMCP, 0, (const WCHAR*)name16,
+		 len16, name8, len16 * 3 + 100, &defaultChar, &defUsed);
+		name8[numChars] = 0;
+
 		if (before_entry_callback)
 		{
-			int cbres = before_entry_callback(cur_file->Name, cur_file->IsDirectory);
+			int cbres = before_entry_callback(name8, cur_file->IsDir);
 			if (cbres != 0)
 			{
 				archive_seterror("7zlib failed to unzip '%s': cancelled from "
-				 "callback", cur_file->Name);
+				 "callback", name8);
 				return cbres;
 			}
 		}
-		std::string out_path = std::string(base) + "/" + cur_file->Name;
-		if (cur_file->IsDirectory)
+
+		std::string out_path = std::string(base) + "/" + name8;
+		if (cur_file->IsDir)
 		{
-			if (!makedir(base, cur_file->Name))
+			if (!makedir(base, name8))
 			{
 				archive_seterror("couldn't create directory '%s'",
 				 out_path.c_str());
@@ -148,19 +144,18 @@ int un7z
 		else
 		{
 			size_t offset, outSizeProcessed;
-			SZ_RESULT res = SzExtract(&instream.sz_stream, &db, i, &blockIndex,
+			SRes res = SzArEx_Extract(&db, &lookstream.s, i, &blockIndex,
 			 &outBuffer, &outBufferSize, &offset, &outSizeProcessed, &allocImp,
 			 &allocTempImp);
-			if (res == SZE_CRC_ERROR)
+			if (res == SZ_ERROR_CRC)
 			{
-				archive_seterror("bad CRC for file '%s' in '%s'",
-				 cur_file->Name, file);
+				archive_seterror("bad CRC for file '%s' in '%s'", name8, file);
 				return -1;
 			}
 			else if (res != SZ_OK)
 			{
 				archive_seterror("7zlib failed to unpack file '%s' in '%s'",
-				 cur_file->Name, file);
+				 name8, file);
 				return -1;
 			}
 			bool was_created = false;
@@ -169,10 +164,10 @@ int un7z
 			FILE* outfile = fopen(out_path.c_str(), "wb");
 			if (!outfile)
 			{
-				size_t p = std::string(cur_file->Name).find_last_of("/\\", std::string::npos);
+				size_t p = std::string(name8).find_last_of("/\\", std::string::npos);
 				if (p != std::string::npos)
 				{
-					makedir(base, std::string(cur_file->Name).substr(0, p).c_str());
+					makedir(base, std::string(name8).substr(0, p).c_str());
 					outfile = fopen(out_path.c_str(), "wb");
 				}
 			}
@@ -194,9 +189,9 @@ int un7z
 				return -1;
 			}
 		}
-		if (cur_file->AreAttributesDefined)
-			SetFileAttributes(out_path.c_str(), cur_file->Attributes);
-		create_callback(cur_file->Name, cur_file->IsDirectory ? 1 : 0);
+		if (cur_file->AttribDefined)
+			SetFileAttributes(out_path.c_str(), cur_file->Attrib);
+		create_callback(name8, cur_file->IsDir ? 1 : 0);
 	}
 
 	return 0;

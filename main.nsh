@@ -43,8 +43,6 @@ CompletedText "$comp_text"
 !insertmacro un.GetParameters
 !include StrFunc.nsh
 ${StrRep}
-${UnStrRep}
-${UnStrLoc}
 
 !define MULTIUSER_EXECUTIONLEVEL Highest
 !include MultiUser.nsh

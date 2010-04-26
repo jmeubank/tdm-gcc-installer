@@ -60,15 +60,16 @@ TDMInstall's Components
 Licensing
 =====
 
-Every source file in the base directory EXCEPT "untgz.c" is licensed freely in
+Every source file in the base directory EXCEPT "untgz.c" is released freely into
 the public domain, subject to the following text:
    DISCLAIMER:
    The author(s) of this file's contents release it into the public domain,
    without express or implied warranty of any kind. You may use, modify, and
    redistribute this file freely.
 
-The source files in the "7z" subdirectory are licensed under the GNU LGPL. See
-7z/MODIFIED_LZMA.txt and 7z/LGPL.txt for details.
+The source files in the "7z" subdirectory are also released into the public
+domain. The original author of these files was Igor Pavlov. Further information
+is typically available at <http://www.7-zip.org/>.
 
 The source files in the "boost" subdirectory are licensed according to Boost's
 license. See boost/LICENSE_1_0.txt for details.

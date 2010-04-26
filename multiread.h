@@ -21,6 +21,7 @@ typedef struct _MultiReader MultiReader;
 
 MultiReader* CreateGZReader(const char *file);
 MultiReader* CreateBZ2Reader(const char *file);
+MultiReader* CreateLZMAReader(const char *file);
 void DestroyMultiReader(MultiReader *mr);
 int MultiRead(MultiReader *mr, void *buf, unsigned len);
 const char *MultiError(MultiReader *mr, int *errnum);
