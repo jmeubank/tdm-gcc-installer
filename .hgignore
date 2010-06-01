@@ -1,8 +1,8 @@
 syntax: glob
 .objs
 **.o
-ctemplate.exe
-tdm-mingw-*.exe
+**.cbTemp
+**.exe
 tdminstall.dll
 archives
 releases
@@ -10,3 +10,4 @@ arcout.nsh
 arcreg.nsh
 TDMInstall.depend
 TDMInstall.layout
+setup_version.h

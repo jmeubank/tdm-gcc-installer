@@ -80,6 +80,7 @@ bool ComponentsTree::BuildTreeView
  (HWND htv,
   int check_index,
   int radio_index,
+  const StringType& system_id,
   TiXmlElement* comp_man_root,
   TiXmlElement* prev_man_root)
 {
@@ -98,12 +99,12 @@ bool ComponentsTree::BuildTreeView
 	 "Components", 0);
 	if (comp_man_root)
 	{
-		if (!ProcessManifest(comp_man_root, hroot))
+		if (!ProcessManifest(comp_man_root, system_id, hroot))
 			return false;
 	}
 	if (prev_man_root)
 	{
-		if (!ProcessManifest(prev_man_root, hroot))
+		if (!ProcessManifest(prev_man_root, system_id, hroot))
 			return false;
 	}
 	HTREEITEM hsmenu =
@@ -325,6 +326,19 @@ void ComponentsTree::WriteInstMan
 	TiXmlDocument out;
 	TiXmlElement* root = new TiXmlElement("TDMInstallManifest");
 	out.LinkEndChild(root);
+	TiXmlElement* sys = man_root->FirstChildElement("System");
+	if (!sys)
+		return;
+	TiXmlElement* sys_out = new TiXmlElement("System");
+	const TiXmlAttribute* attribute;
+	for (attribute = sys->FirstAttribute();
+	 attribute;
+	 attribute = attribute->Next())
+	{
+		sys_out->SetAttribute(attribute->Name(),
+		 attribute->Value());
+	}
+	root->LinkEndChild(sys_out);
 	typedef std::map< std::string, TiXmlElement* > IDElementMap;
 	IDElementMap linked_map;
 	std::stack< TiXmlElement* > hierarchy;
@@ -339,10 +353,9 @@ void ComponentsTree::WriteInstMan
 				const TiXmlElement* entry_comp = inst_man.GetComponent(item_id);
 				if (entry_comp)
 				{
-					TiXmlElement* link_el = root;
+					TiXmlElement* link_el = sys_out;
 					TiXmlElement* new_el = entry_comp->Clone()->ToElement();
 					new_el->SetValue(item->element->Value());
-					const TiXmlAttribute* attribute = 0;
 					for (attribute = item->element->FirstAttribute();
 					 attribute;
 					 attribute = attribute->Next())
@@ -353,7 +366,7 @@ void ComponentsTree::WriteInstMan
 					new_el->SetAttribute("prev", "true");
 					for (TiXmlElement* clone_el =
 					  TiXmlHandle(item->element->Parent()).ToElement();
-					 clone_el && strcmp(clone_el->Value(), "TDMInstallManifest") != 0;
+					 clone_el && strcmp(clone_el->Value(), "System") != 0;
 					 clone_el = TiXmlHandle(clone_el->Parent()).ToElement())
 					{
 						IDElementMap::iterator found = linked_map.end();
@@ -392,7 +405,7 @@ void ComponentsTree::WriteInstMan
 	if (mfiles)
 	{
 		TiXmlElement* new_el = mfiles->Clone()->ToElement();
-		root->LinkEndChild(new_el);
+		sys_out->LinkEndChild(new_el);
 	}
 	
 	out.SaveFile(outpath.c_str());
@@ -542,12 +555,25 @@ struct InsParent
 
 bool ComponentsTree::ProcessManifest
  (TiXmlElement* mroot,
+  const StringType& system_id,
   HTREEITEM hroot)
 {
 	if (!mroot)
 		return false;
 	std::list< InsParent > search_children;
-	search_children.push_back(InsParent(mroot, RefGetPtr(man_root), hroot));
+	TiXmlElement* sys = mroot->FirstChildElement("System");
+	while (sys)
+	{
+		const char* sys_id = NonEmptyAttribute(sys, "id");
+		if (sys_id && strcmp(sys_id, system_id.c_str()) == 0)
+			break;
+		sys = sys->NextSiblingElement("System");
+	}
+	if (!sys)
+		return false;
+	TiXmlElement* sys_copy = sys->Clone()->ToElement();
+	man_root->LinkEndChild(sys_copy);
+	search_children.push_back(InsParent(sys, sys_copy, hroot));
 	while (!search_children.empty())
 	{
 		TiXmlElement* ex_parent = search_children.front().ex;

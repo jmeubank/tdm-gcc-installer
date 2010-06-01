@@ -16,9 +16,9 @@ this file freely.
 #define CONFIG_H_INC
 
 
-#define STR_SHORTNAME "TDM/MinGW"
+#define STR_SHORTNAME "TDM-GCC"
 
-#define STR_SETUP_VER "1.1004.0"
+#include "setup_version.h" //generated in Makefile
 
 
 #endif // CONFIG_H_INC

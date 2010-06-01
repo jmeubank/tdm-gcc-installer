@@ -64,6 +64,7 @@ public:
 	 (HWND htv,
 	  int check_index,
 	  int radio_index,
+	  const StringType& system_id,
 	  TiXmlElement* comp_man_root,
 	  TiXmlElement* prev_man_root);
 
@@ -97,6 +98,7 @@ public:
 private:
 	bool ProcessManifest
 	 (TiXmlElement* mroot,
+	  const StringType& system_id,
 	  HTREEITEM hroot);
 	HTREEITEM AddItem
 	 (TiXmlElement* ex_el,

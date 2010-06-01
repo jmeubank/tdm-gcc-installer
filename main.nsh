@@ -8,10 +8,23 @@
 ; redistribute this file freely.
 
 
-;;;;;
-;; All the dirty work happens here. For the basic settings you're wanting to
-;; change, look in "setup_*.nsi".
-;;;;;
+; Ephemeral settings
+!searchparse /file SETUP-VERSION.txt "" SETUP_VER
+!define SHORTNAME "TDM-GCC"
+!define DEF_INST_DIR_32 "\MinGW32"
+!define DEF_INST_DIR_64 "\MinGW64"
+!define INNER_MANIFEST "inner-manifest.txt"
+!define LOCAL_NET_MANIFEST "net-manifest.txt"
+!define NET_MANIFEST_URL "http://tdragon.net/tdminst/net-manifest.txt"
+!define APPDATA_SUBFOLDER "TDM-GCC"
+!define STARTMENU_ENTRY_32 "MinGW32"
+!define STARTMENU_ENTRY_64 "MinGW64"
+!define UNINSTKEY "TDM-GCC"
+!define READMEFILE_32 "README-gcc-tdm.txt"
+!define READMEFILE_64 "README-gcc-tdm64.txt"
+!define INFOURL "http://tdm-gcc.tdragon.net/"
+!define UPDATEURL "http://tdm-gcc.tdragon.net/"
+!define PUBLISHER "TDM"
 
 
 ; Plugin settings
@@ -62,6 +75,7 @@ Var num_prev_insts
 Var man_msg
 Var uninst
 Var have_allusers_mode
+Var system_id
 
 
 ;;; UI settings
@@ -77,6 +91,8 @@ Var have_allusers_mode
 ;;; Installer Pages
 Page custom WizardAction_Create WizardAction_Leave
 
+Page custom EditionSelect_Create EditionSelect_Leave
+
 !define MUI_DIRECTORYPAGE_VARIABLE $inst_dir
 !define MUI_PAGE_CUSTOMFUNCTION_SHOW InstDir_Show
 !define MUI_PAGE_CUSTOMFUNCTION_LEAVE InstDir_Leave
@@ -84,7 +100,6 @@ Page custom WizardAction_Create WizardAction_Leave
 
 Page custom MirrorSelect_Create MirrorSelect_Leave
 
-; !insertmacro MUI_PAGE_COMPONENTS
 Page custom Components_Create
 
 !define MUI_INSTFILESPAGE_FINISHHEADER_TEXT "$inst_ftext"
@@ -92,7 +107,7 @@ Page custom Components_Create
 !insertmacro MUI_PAGE_INSTFILES
 
 !define MUI_FINISHPAGE_RUN
-!define MUI_FINISHPAGE_RUN_TEXT "Read '${READMEFILE}' (recommended)"
+!define MUI_FINISHPAGE_RUN_TEXT "Read the TDM-GCC README file (recommended)"
 !define MUI_FINISHPAGE_RUN_FUNCTION "LaunchReadme"
 !define MUI_PAGE_CUSTOMFUNCTION_SHOW "Finish_Show"
 !insertmacro MUI_PAGE_FINISH
@@ -121,8 +136,10 @@ Section "Install Components" SEC_INSTALL_COMPONENTS
 	RealProgress::SetProgress /NOUNLOAD 0
 
 	SetOutPath "$inst_dir"
-	CreateDirectory "$inst_dir\downloaded"
-	tdminstall::AddManMiscFile /NOUNLOAD "downloaded/"
+	CreateDirectory "$inst_dir\__installer"
+	tdminstall::AddManMiscFile /NOUNLOAD "__installer/"
+	CreateDirectory "$inst_dir\__installer\downloaded"
+	tdminstall::AddManMiscFile /NOUNLOAD "__installer/downloaded/"
 
 	; Unpack any inner archives
 !ifdef INNER_COMPONENTS
@@ -143,7 +160,7 @@ Section "Install Components" SEC_INSTALL_COMPONENTS
 	; Install archives
 	GetFunctionAddress $0 "ItemBeforeActionCallback"
 	tdminstall::RemoveAndAdd /NOUNLOAD \
-	 "$inst_dir\downloaded|$EXEDIR\downloaded|$PLUGINSDIR" $0
+	 "$inst_dir\__installer\downloaded|$EXEDIR\downloaded|$PLUGINSDIR" $0
 	Pop $0
 	${If} $0 != "OK"
 		DetailPrint "$0"
@@ -155,21 +172,24 @@ Section "Install Components" SEC_INSTALL_COMPONENTS
 	tdminstall::AddManMiscFile /NOUNLOAD "mingwvars.bat"
 
 	; This executable
-	CopyFiles /SILENT "$EXEPATH" "$inst_dir"
-	tdminstall::AddManMiscFile /NOUNLOAD "$EXEFILE"
+	CopyFiles /SILENT "$EXEPATH" "$inst_dir\__installer"
+	tdminstall::AddManMiscFile /NOUNLOAD "__installer/$EXEFILE"
 
 	; Start menu shortcuts
 	tdminstall::GetComponentSelected /NOUNLOAD "startmenu"
 	Pop $0
 	${If} $0 == 1
-		CreateDirectory "$SMPROGRAMS\${STARTMENU_ENTRY}"
-		CreateShortCut \
-		 "$SMPROGRAMS\${STARTMENU_ENTRY}\MinGW Command Prompt.lnk" \
+		${If} "$system_id" == "tdm64"
+			StrCpy $1 "$SMPROGRAMS\${STARTMENU_ENTRY_64}"
+		${Else}
+			StrCpy $1 "$SMPROGRAMS\${STARTMENU_ENTRY_32}"
+		${EndIf}
+		CreateDirectory "$1"
+		CreateShortCut "$1\MinGW Command Prompt.lnk" \
 		 '%comspec%' '/k ""$inst_dir\mingwvars.bat""' \
 		 "" "" "" "" "Open ${SHORTNAME} Command Prompt"
-		CreateShortCut \
-		 "$SMPROGRAMS\${STARTMENU_ENTRY}\Modify or Remove MinGW.lnk" \
-		 "$inst_dir\$EXEFILE"
+		CreateShortCut "$1\Modify or Remove MinGW.lnk" \
+		 "$inst_dir\__installer\$EXEFILE"
 	${EndIf}
 
 	; PATH addition
@@ -189,16 +209,16 @@ Section "Install Components" SEC_INSTALL_COMPONENTS
 	; Add/Remove Programs entry
 	WriteRegStr SHELL_CONTEXT \
 	 "Software\Microsoft\Windows\CurrentVersion\Uninstall\${UNINSTKEY}" \
-	 "DisplayName" "TDM/MinGW"
+	 "DisplayName" "TDM-GCC"
 	WriteRegStr SHELL_CONTEXT \
 	 "Software\Microsoft\Windows\CurrentVersion\Uninstall\${UNINSTKEY}" \
-	 "UninstallString" '"$inst_dir\$EXEFILE" /tdmu'
+	 "UninstallString" '"$inst_dir\__installer\$EXEFILE" /tdmu'
 	WriteRegDWORD SHELL_CONTEXT \
 	 "Software\Microsoft\Windows\CurrentVersion\Uninstall\${UNINSTKEY}" \
 	 "NoRepair" 1
 	WriteRegStr SHELL_CONTEXT \
 	 "Software\Microsoft\Windows\CurrentVersion\Uninstall\${UNINSTKEY}" \
-	 "ModifyPath" '"$inst_dir\$EXEFILE"'
+	 "ModifyPath" '"$inst_dir\__installer\$EXEFILE"'
 	WriteRegStr SHELL_CONTEXT \
 	 "Software\Microsoft\Windows\CurrentVersion\Uninstall\${UNINSTKEY}" \
 	 "InstallLocation" "$inst_dir"
@@ -261,6 +281,8 @@ Section "un.Uninstall"
 		${Else}
 			Call un.MultiUser.InstallMode.AllUsers
 		${EndIf}
+		tdminstall::GetSystemID /NOUNLOAD "$uninst"
+		Pop $system_id
 		GetFunctionAddress $0 "un.ItemBeforeActionCallback"
 		tdminstall::RemoveInst /NOUNLOAD "$uninst" \
 		 "$APPDATA\${APPDATA_SUBFOLDER}\installations.txt" $0
@@ -269,20 +291,21 @@ Section "un.Uninstall"
 			DetailPrint "$0"
 			Goto onerrorun
 		${EndIf}
-		${If} ${FileExists} \
-		 "$SMPROGRAMS\${STARTMENU_ENTRY}\MinGW Command Prompt.lnk"
-			ShellLink::GetShortCutArgs \
-			 "$SMPROGRAMS\${STARTMENU_ENTRY}\MinGW Command Prompt.lnk"
+		${If} "$system_id" == "tdm64"
+			StrCpy $1 "${STARTMENU_ENTRY_64}"
+		${Else}
+			StrCpy $1 "${STARTMENU_ENTRY_32}"
+		${EndIf}
+		${If} ${FileExists} "$SMPROGRAMS\$1\MinGW Command Prompt.lnk"
+			ShellLink::GetShortCutArgs "$SMPROGRAMS\$1\MinGW Command Prompt.lnk"
 			Pop $0
 			tdminstall::StringInString /NOUNLOAD "$uninst" "$0"
 			Pop $0
 			${If} "$0" == 1
-				Delete \
-				 "$SMPROGRAMS\${STARTMENU_ENTRY}\MinGW Command Prompt.lnk"
-				Delete \
-				 "$SMPROGRAMS\${STARTMENU_ENTRY}\Modify or Remove MinGW.lnk"
-				RMDir "$SMPROGRAMS\${STARTMENU_ENTRY}"
-				DetailPrint "Removed '${STARTMENU_ENTRY}' Start Menu entry"
+				Delete "$SMPROGRAMS\$1\MinGW Command Prompt.lnk"
+				Delete "$SMPROGRAMS\$1\Modify or Remove MinGW.lnk"
+				RMDir "$SMPROGRAMS\$1"
+				DetailPrint "Removed '$1' Start Menu entry"
 			${EndIf}
 		${EndIf}
 		DetailPrint "Removing any instances of '$uninst\bin' from PATH"
@@ -339,6 +362,7 @@ Function .onInit
 	StrCpy $working_manifest "$PLUGINSDIR\${INNER_MANIFEST}"
 	StrCpy $num_prev_insts 0
 	StrCpy $man_msg ""
+	StrCpy $system_id "tdm32"
 	tdminstall::BeginInstFindBanner /NOUNLOAD
 	tdminstall::UpdateFoundInsts /NOUNLOAD \
 	 "$APPDATA\${APPDATA_SUBFOLDER}\installations.txt"
@@ -354,8 +378,7 @@ Function .onInit
 	${EndIf}
 	tdminstall::EndInstFindBanner /NOUNLOAD
 !ifdef INNER_COMPONENTS
-!system 'ctemplate "${INNER_COMPONENTS}" arcreg.template.txt > arcreg.nsh' \
- = 0
+!system 'ctemplate "${INNER_COMPONENTS}" arcreg.template.txt > arcreg.nsh' = 0
 !include arcreg.nsh
 !endif
 FunctionEnd
@@ -383,7 +406,7 @@ FunctionEnd
 
 Function .onVerifyInstDir
 	${If} "$setup_type" != "create"
-		${IfNot} ${FileExists} "$inst_dir\installed_man.txt"
+		${IfNot} ${FileExists} "$inst_dir\__installer\installed_man.txt"
 			${If} $man_msg != ""
 				SendMessage $man_msg ${WM_SETTEXT} 0 \
 				 'STR:(No installation manifest present in this directory)'
@@ -411,8 +434,8 @@ Function ArchiveCallbackForDownload
 		DetailPrint "Using local archive '$EXEDIR\downloaded\$apc_file'"
 		Push "OK"
 		Return
-	${ElseIf} ${FileExists} "$inst_dir\downloaded\$apc_file"
-		DetailPrint "Using local archive '$inst_dir\downloaded\$apc_file'"
+	${ElseIf} ${FileExists} "$inst_dir\__installer\downloaded\$apc_file"
+		DetailPrint "Using local archive '$inst_dir\__installer\downloaded\$apc_file'"
 		Push "OK"
 		Return
 	${ElseIf} ${FileExists} "$PLUGINSDIR\$apc_file"
@@ -440,7 +463,7 @@ dlfile:
 		StrCpy $0 "Couldn't download '$dl_mirror$apc_path$apc_file'"
 	${EndIf}
 	IntOp $ar_dl_index $ar_dl_index + 1
-	tdminstall::AddManMiscFile /NOUNLOAD "downloaded/$apc_file"
+	tdminstall::AddManMiscFile /NOUNLOAD "__installer/downloaded/$apc_file"
 
 	Exch $0
 FunctionEnd
@@ -497,7 +520,7 @@ Function DownloadArchive
 	inetc::get \
 	 /CAPTION "Download '$da_file'" \
 	 /QUESTION "Are you sure you want to cancel the download?" \
-	 "$da_url" "$inst_dir\downloaded\$da_file" \
+	 "$da_url" "$inst_dir\__installer\downloaded\$da_file" \
 	 /END
 	; Leave result on stack for caller to use
 FunctionEnd
@@ -580,17 +603,8 @@ FunctionEnd
 
 Function WizardAction_Leave
 	; Set $inst_dir
-	${GetRoot} "$PROGRAMFILES" $0
-	StrCpy $0 "$0${DEF_INST_DIR}"
-	${If} $setup_type == "create"
-		tdminstall::IsPrevInst /NOUNLOAD "$0"
-		Pop $1
-		${If} "$1" == 1
-			StrCpy $inst_dir ""
-		${Else}
-			StrCpy $inst_dir "$0"
-		${EndIf}
-	${ElseIf} "$inst_dir" == ""
+	${If} "$setup_type" != "create"
+	${AndIf} "$inst_dir" == ""
 		tdminstall::GetFirstPrevInst /NOUNLOAD
 		Pop $inst_dir
 	${EndIf}
@@ -701,6 +715,88 @@ Function WizardAction_OnInstSel
 FunctionEnd
 
 
+Function EditionSelect_Create
+	${If} "$setup_type" == "manage"
+	${OrIf} "$setup_type" == "remove"
+!ifdef INNER_COMPONENTS
+	${OrIf} "$dlupdates" != "yes"
+		StrCpy $system_id "${INNER_COMPONENTS_SYS}"
+		${GetRoot} "$PROGRAMFILES" $0
+		${If} "$system_id" == "tdm64"
+			StrCpy $0 "$0${DEF_INST_DIR_64}"
+		${Else}
+			StrCpy $0 "$0${DEF_INST_DIR_32}"
+		${EndIf}
+		tdminstall::IsPrevInst /NOUNLOAD "$0"
+		Pop $1
+		${If} "$1" == 1
+			StrCpy $inst_dir ""
+		${Else}
+			StrCpy $inst_dir "$0"
+		${EndIf}
+!endif
+		Abort
+	${EndIf}
+
+	!insertmacro MUI_HEADER_TEXT "Select Edition" \
+	 "Choose which edition of TDM-GCC you want to install."
+
+	nsDialogs::Create /NOUNLOAD 1018
+	Pop $2
+
+	IntOp $0 $(^FontSize) + 2
+	CreateFont $0 "$(^Font)" $0 "700"
+
+	; Edition radio buttons
+	${NSD_CreateRadioButton} 0u 30u 190u 10u "MinGW/TDM (32-bit)"
+	Pop $1
+	SendMessage $1 ${WM_SETFONT} $0 1
+	${If} "$system_id" == "tdm32"
+		${NSD_Check} $1
+	${EndIf}
+	${NSD_OnClick} $1 EditionSelect_OnClick32
+	${NSD_CreateLabel} 15u 42u 190u 20u \
+	 "Create a MinGW-based installation"
+	Pop $1
+	${NSD_CreateRadioButton} 0u 71u 190u 10u "MinGW-w64/TDM64 Experimental (32-bit and 64-bit)"
+	Pop $1
+	SendMessage $1 ${WM_SETFONT} $0 1
+	${If} "$system_id" == "tdm64"
+		${NSD_Check} $1
+	${EndIf}
+	${NSD_OnClick} $1 EditionSelect_OnClick64
+	${NSD_CreateLabel} 15u 83u 190u 20u \
+	 "Create a MinGW-w64-based installation"
+	Pop $1
+
+	nsDialogs::Show
+FunctionEnd
+
+Function EditionSelect_Leave
+	${GetRoot} "$PROGRAMFILES" $0
+	${If} "$system_id" == "tdm64"
+		StrCpy $0 "$0${DEF_INST_DIR_64}"
+	${Else}
+		StrCpy $0 "$0${DEF_INST_DIR_32}"
+	${EndIf}
+	tdminstall::IsPrevInst /NOUNLOAD "$0"
+	Pop $1
+	${If} "$1" == 1
+		StrCpy $inst_dir ""
+	${Else}
+		StrCpy $inst_dir "$0"
+	${EndIf}
+FunctionEnd
+
+Function EditionSelect_OnClick32
+	StrCpy $system_id "tdm32"
+FunctionEnd
+
+Function EditionSelect_OnClick64
+	StrCpy $system_id "tdm64"
+FunctionEnd
+
+
 Function InstDir_Show
 	!insertmacro MUI_HEADER_TEXT "$stype_shortdesc: Installation Directory" \
 	  "Choose the installation directory to use."
@@ -782,7 +878,7 @@ noabort:
 		tdminstall::SetPrevInstMan /NOUNLOAD ""
 		Pop $0
 	${Else}
-		tdminstall::SetPrevInstMan /NOUNLOAD "$inst_dir\installed_man.txt"
+		tdminstall::SetPrevInstMan /NOUNLOAD "$inst_dir\__installer\installed_man.txt"
 		Pop $0
 		${If} "$0" != 1
 			MessageBox MB_OK|MB_ICONEXCLAMATION \
@@ -790,6 +886,8 @@ noabort:
 			  loaded."
 			Abort
 		${EndIf}
+		tdminstall::GetSystemID /NOUNLOAD "$inst_dir"
+		Pop $system_id
 	${EndIf}
 	tdminstall::SetInstLocation /NOUNLOAD "$inst_dir"
 FunctionEnd
@@ -870,16 +968,16 @@ Function Components_Create
 	${NSD_CreateDropList} 92u 21u 206u 75u ""
 	Pop $1
 	${If} "$setup_type" == "manage"
-		tdminstall::PopulateInstallTypeList /NOUNLOAD $1 1
+		tdminstall::PopulateInstallTypeList /NOUNLOAD "$system_id" $1 1
 	${Else}
-		tdminstall::PopulateInstallTypeList /NOUNLOAD $1 0
+		tdminstall::PopulateInstallTypeList /NOUNLOAD "$system_id" $1 0
 	${EndIf}
 
 	${NSD_CreateLabel} 0u 38u 300u 9u \
 	 "Or, select the optional components you wish to have installed:"
 	Pop $1
 
-	tdminstall::CreateComponentsTree /NOUNLOAD $0
+	tdminstall::CreateComponentsTree /NOUNLOAD $0 "$system_id"
 
 	${NSD_CreateGroupBox} 210u 45u 89u 94u "Description"
 	Pop $1
@@ -897,16 +995,23 @@ FunctionEnd
 
 
 Function Finish_Show
-	${IfNot} ${FileExists} "$inst_dir\${READMEFILE}"
+	${IfNot} ${FileExists} "$inst_dir\${READMEFILE_32}"
+	${AndIfNot} ${FileExists} "$inst_dir\${READMEFILE_64}"
 		SendMessage $mui.FinishPage.Run ${BM_SETCHECK} 0 ${BST_UNCHECKED}
 		ShowWindow $mui.FinishPage.Run ${SW_HIDE}
 	${EndIf}
 FunctionEnd
 
 Function LaunchReadme
-	Push "$inst_dir\${READMEFILE}"
-	Call ConvertUnixNewLines
-	ExecShell "open" "$inst_dir\${READMEFILE}"
+	${If} "$system_id" == "tdm64"
+		Push "$inst_dir\${READMEFILE_64}"
+		Call ConvertUnixNewLines
+		ExecShell "open" "$inst_dir\${READMEFILE_64}"
+	${Else}
+		Push "$inst_dir\${READMEFILE_32}"
+		Call ConvertUnixNewLines
+		ExecShell "open" "$inst_dir\${READMEFILE_32}"
+	${EndIf}
 FunctionEnd
 
 Function ConvertUnixNewLines

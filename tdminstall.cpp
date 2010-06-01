@@ -509,13 +509,24 @@ extern "C" void __declspec(dllexport) PopulateInstallTypeList
 {
 	NSIS::UpdateParams(string_size, variables, stacktop, extra);
 
+	StringType system_id = NSIS::popstring();
 	hitypecb = (HWND)NSIS::popint();
 	int is_previnst = NSIS::popint();
+
+	TiXmlElement* sys_el = TiXmlHandle(working_man->RootElement()).FirstChildElement("System").ToElement();
+	while (sys_el)
+	{
+		const char* id = sys_el->Attribute("id");
+		if (id && (system_id == id))
+			break;
+	}
+	if (!sys_el)
+		return;
 
 	itypes_by_index.clear();
 	itype_current = -1;
 	itype_custom = -1;
-	for (TiXmlElement* itype = TiXmlHandle(working_man->RootElement()).FirstChildElement("InstallType").ToElement();
+	for (TiXmlElement* itype = sys_el->FirstChildElement("InstallType");
 	 itype;
 	 itype = itype->NextSiblingElement("InstallType"))
 	{
@@ -548,6 +559,20 @@ extern "C" void __declspec(dllexport) CreateComponentsTree
 	NSIS::UpdateParams(string_size, variables, stacktop, extra);
 
 	HWND hdialog = (HWND)NSIS::popint();
+	StringType system_id = NSIS::popstring();
+
+	if (system_id.length() == 0)
+	{
+		if (!prev_man)
+			return;
+		TiXmlElement* sys_el = prev_man->RootElement()->FirstChildElement("System");
+		if (!sys_el)
+			return;
+		const char* sys_id = sys_el->Attribute("id");
+		if (!sys_id || strlen(sys_id) <= 0)
+			return;
+		system_id = sys_id;
+	}
 
 	htree = CreateWindowEx(
 	 WS_EX_WINDOWEDGE | WS_EX_CLIENTEDGE,
@@ -580,7 +605,7 @@ extern "C" void __declspec(dllexport) CreateComponentsTree
 	}
 	(void)TreeView_SetImageList(htree, RefGetPtr(imglist), TVSIL_STATE);
 
-	ctree.BuildTreeView(htree, ncheck, nradio,
+	ctree.BuildTreeView(htree, ncheck, nradio, system_id,
 	 working_man ? working_man->RootElement() : 0,
 	 prev_man ? prev_man->RootElement() : 0);
 
@@ -678,7 +703,7 @@ extern "C" void __declspec(dllexport) SetInstLocation
 	inst_loc = NSIS::popstring();
 	if (inst_loc.length() > 0)
 		inst_man = RefType< InstallManifest >::Ref(
-		 new InstallManifest(inst_loc + "\\installed_man.txt")
+		 new InstallManifest(inst_loc + "\\__installer\\installed_man.txt")
 		 );
 	else
 		inst_man = RefType< InstallManifest >::Ref();
@@ -835,7 +860,9 @@ extern "C" void __declspec(dllexport) RemoveAndAdd
 	// Add selected components //
 
 	inst_man->SetComponent("MiscFiles");
-	inst_man->AddEntry("installed_man.txt");
+	mkdir((inst_loc + "/__installer").c_str());
+	inst_man->AddEntry("__installer/");
+	inst_man->AddEntry("__installer/installed_man.txt");
 
 	StringType result = "OK";
 
@@ -961,7 +988,7 @@ extern "C" void __declspec(dllexport) WriteInstManifest
 {
 	if (inst_man)
 	{
-		ctree.WriteInstMan(inst_loc + "\\installed_man.txt",
+		ctree.WriteInstMan(inst_loc + "\\__installer\\installed_man.txt",
 		 *RefGetPtr(inst_man));
 	}
 }
@@ -1001,7 +1028,7 @@ static void ParseInstsFile(const char* fname)
 		 instr[i] == '\n' || instr[i] == '\r';
 		 --i)
 			instr[i] = '\0';
-		if (FileExists((StringType(instr) + "\\installed_man.txt").c_str()))
+		if (FileExists((StringType(instr) + "\\__installer\\installed_man.txt").c_str()))
 			prev_insts.insert(instr);
 	}
 }
@@ -1518,11 +1545,11 @@ extern "C" void __declspec(dllexport) RemoveInst
 		NSIS::pushstring("Uninstall location hasn't been set");
 		return;
 	}
-	TiXmlDocument mdoc((uninstloc + "\\installed_man.txt").c_str());
+	TiXmlDocument mdoc((uninstloc + "\\__installer\\installed_man.txt").c_str());
 	if (!mdoc.LoadFile())
 	{
 		StringType estr = std::string("Couldn't load '") + uninstloc
-		 + "\\installed_man.txt'";
+		 + "\\__installer\\installed_man.txt'";
 		NSIS::pushstring(estr.c_str());
 		return;
 	}
@@ -1794,6 +1821,34 @@ extern "C" void __declspec(dllexport) EnsureNotInPathEnv
 		SendMessageTimeout(HWND_BROADCAST, WM_SETTINGCHANGE, 0,
 		 (LPARAM)"Environment", SMTO_ABORTIFHUNG, 5000, &dwReturnValue);
 	}
+}
+
+
+extern "C" void __declspec(dllexport) GetSystemID
+(HWND hwndParent,
+ int string_size,
+ char *variables,
+ stack_t **stacktop,
+ extra_parameters *extra)
+{
+	NSIS::UpdateParams(string_size, variables, stacktop, extra);
+
+	StringType path = NSIS::popstring();
+
+	const char* id = 0;
+	TiXmlDocument doc((path + "\\__installer\\installed_man.txt").c_str());
+	if (doc.LoadFile())
+	{
+		TiXmlElement* sys_el
+		 = TiXmlHandle(doc.RootElement()).FirstChildElement("System").ToElement();
+		if (sys_el)
+			id = sys_el->Attribute("id");
+	}
+
+	if (id && strlen(id) > 0)
+		NSIS::pushstring(id);
+	else
+		NSIS::pushstring("");
 }
 
 
