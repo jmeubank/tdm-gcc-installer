@@ -748,7 +748,7 @@ Function EditionSelect_Create
 	CreateFont $0 "$(^Font)" $0 "700"
 
 	; Edition radio buttons
-	${NSD_CreateRadioButton} 0u 30u 190u 10u "MinGW/TDM (32-bit)"
+	${NSD_CreateRadioButton} 0u 30u 250u 10u "MinGW/TDM (32-bit)"
 	Pop $1
 	SendMessage $1 ${WM_SETFONT} $0 1
 	${If} "$system_id" == "tdm32"
@@ -758,7 +758,7 @@ Function EditionSelect_Create
 	${NSD_CreateLabel} 15u 42u 190u 20u \
 	 "Create a MinGW-based installation"
 	Pop $1
-	${NSD_CreateRadioButton} 0u 71u 190u 10u "MinGW-w64/TDM64 Experimental (32-bit and 64-bit)"
+	${NSD_CreateRadioButton} 0u 71u 250u 10u "MinGW-w64/TDM64 Experimental (32-bit and 64-bit)"
 	Pop $1
 	SendMessage $1 ${WM_SETFONT} $0 1
 	${If} "$system_id" == "tdm64"

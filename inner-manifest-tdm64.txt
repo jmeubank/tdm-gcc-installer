@@ -57,7 +57,6 @@
 		<InstallType default="true" id="tdmrec" name="TDM-GCC Recommended, C/C++">
 			<Select id="gcc-core-4.5.0-tdm64-1" />
 			<Select id="gcc-c++-4.5.0-tdm64-1" />
-			<Select id="gcc-openmp-4.5.0-tdm64-1" />
 			<Select id="binutils-2.20.51-tdm64-20100322" />
 			<Select id="mingw64-runtime-tdm64-gcc45-svn2455" />
 			<Select id="mingw32-make-3.81-20090914" />

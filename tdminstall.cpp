@@ -519,6 +519,7 @@ extern "C" void __declspec(dllexport) PopulateInstallTypeList
 		const char* id = sys_el->Attribute("id");
 		if (id && (system_id == id))
 			break;
+		sys_el = sys_el->NextSiblingElement("System");
 	}
 	if (!sys_el)
 		return;

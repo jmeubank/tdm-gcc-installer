@@ -12,10 +12,13 @@ TDMINSTDLL = plugins\tdminstall.dll
 
 CC = gcc
 CFLAGS = -Wall -Os -I. -Ibzip2 -Izlib -m32
+#CFLAGS = -Wall -g -I. -Ibzip2 -Izlib -m32
 CXX = g++
 CXXFLAGS = -Wall -Os -I. -Ibzip2 -Izlib -m32
+#CXXFLAGS = -Wall -g -I. -Ibzip2 -Izlib -m32
 LD = g++
 LDFLAGS = -s -m32
+#LDFLAGS = -m32
 RC = windres
 RCFLAGS = -F pe-i386
 
