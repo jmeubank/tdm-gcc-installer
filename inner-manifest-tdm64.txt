@@ -6,21 +6,20 @@
 		 64-bit	Windows.)</Description>
 		<Category id="gcc" name="gcc">
 			<Description>The GNU Compiler Collection (Windows native)</Description>
-			<Version default="true" id="gcc-4.5.1-tdm64-1-p2" name="TDM Experimental: 4.5.1-tdm64-1 p2">
-				<Description>Experimental Release - gcc-4.5.1-tdm64-1 patch 2:
-				 The most recent TDM/MinGW-w64 release of GCC for
-				 MinGW</Description>
-				<Component base="gcc-core" name="core" id="gcc-core-4.5.1-tdm64-1-p2" unsize="35990862">
+			<Version default="true" id="gcc-4.5.2-tdm64-1" name="TDM64 Current: 4.5.2-tdm64-1">
+				<Description>Current Release - gcc-4.5.2-tdm64-1: The most
+				 recent TDM64/MinGW-w64 release of GCC for MinGW</Description>
+				<Component base="gcc-core" name="core" id="gcc-core-4.5.2-tdm64-1" unsize="36107250">
 					<Description>Required base files and C support</Description>
-					<Archive path="gcc-4.5.1-tdm64-1-core-2.tar.lzma" arcsize="9533255" />
+					<Archive path="gcc-4.5.2-tdm64-1-core.tar.lzma" arcsize="9568450" />
 				</Component>
-				<Component base="gcc-c++" name="c++" id="gcc-c++-4.5.1-tdm64-1" unsize="46306134">
+				<Component base="gcc-c++" name="c++" id="gcc-c++-4.5.2-tdm64-1" unsize="46458901">
 					<Description>C++ support</Description>
-					<Archive path="gcc-4.5.1-tdm64-1-c++.tar.lzma" arcsize="7511090" />
+					<Archive path="gcc-4.5.2-tdm64-1-c++.tar.lzma" arcsize="7529416" />
 				</Component>
-				<Component base="gcc-openmp" name="openmp" id="gcc-openmp-4.5.1-tdm64-1" unsize="2048210">
+				<Component base="gcc-openmp" name="openmp" id="gcc-openmp-4.5.2-tdm64-1" unsize="1986844">
 					<Description>OpenMP support (libgomp, pthreads-w32)</Description>
-					<Archive path="gcc-4.5.1-tdm64-1-openmp.tar.lzma" arcsize="319503" />
+					<Archive path="gcc-4.5.2-tdm64-1-openmp.tar.lzma" arcsize="325613" />
 				</Component>
 			</Version>
 		</Category>
@@ -28,24 +27,26 @@
 			<Description>GNU Binutils: required for creating executables, DLLs,
 			 or static libraries; includes other miscellaneous
 			 tools</Description>
-			<Version default="true" id="binutils-2.20.51-tdm64-20100816" name="Binutils Snapshot: 2.20.51-tdm64-20100816" unsize="27405666">
-				<Description>Snapshot - binutils-2.20.51-tdm64-20100816</Description>
-				<Archive path="binutils-2.20.51-tdm64-20100816.tar.lzma" arcsize="2643806" />
+			<Version default="true" id="binutils-2.21-tdm64-1" name="Binutils Stable: 2.21-tdm64-1" unsize="30088575">
+				<Description>Stable Release - binutils-2.21-tdm64-1</Description>
+				<Archive path="binutils-2.21-tdm64-1.tar.lzma" arcsize="2716748" />
 			</Version>
 		</Component>
 		<Component id="mingw64-runtime" name="mingw64-runtime">
 			<Description>Headers and import libraries for Microsoft's C Runtime
 			 and Windows APIs, with minimal GNU extensions</Description>
-			<Version default="true" id="mingw64-runtime-tdm64-gcc45-svn3485" name="MinGW-w64 Runtime Snapshot: tdm64-gcc45-svn3485" unsize="167613478">
-				<Description>SVN Snapshot - r3485 for GCC 4.5 multilib</Description>
-				<Archive path="mingw64-runtime-tdm64-gcc45-svn3485.tar.lzma" arcsize="7706793" />
+			<Version default="true" id="mingw64-runtime-tdm64-gcc45-svn3913" name="MinGW-w64 Runtime Snapshot: tdm64-gcc45-svn3913" unsize="130857048">
+				<Description>SVN Snapshot - r3913 for GCC 4.5 multilib</Description>
+				<Archive path="mingw64-runtime-tdm64-gcc45-svn3913.tar.lzma" arcsize="6625876" />
 			</Version>
 		</Component>
 		<Component id="mingw32-make" name="mingw32-make">
 			<Description>GNU Make for MinGW (NOT for MSYS)</Description>
-			<Version default="true" id="mingw32-make-3.82-3" name="MinGW Stable: 3.82-3" unsize="754167">
-				<Description>Current Release - mingw32-make-3.82-3</Description>
-				<Archive path="make-3.82-3-mingw32-bin.tar.lzma" arcsize="213523" />
+			<Version default="true" id="mingw32-make-3.82-5" name="MinGW Stable: 3.82-5" unsize="1389942">
+				<Description>Current Release - mingw32-make-3.82-5</Description>
+				<Archive path="make-3.82-5-mingw32-bin.tar.lzma" arcsize="93652" />
+				<Archive path="libintl-0.17-1-mingw32-dll-8.tar.lzma" arcsize="45508" />
+				<Archive path="libiconv-1.13.1-1-mingw32-dll-2.tar.lzma" arcsize="549489" />
 			</Version>
 		</Component>
 		<Component id="mingw64-gdb" name="gdb">
@@ -56,11 +57,11 @@
 			</Version>
 		</Component>
 		<InstallType default="true" id="tdmrec" name="TDM-GCC Recommended, C/C++">
-			<Select id="gcc-core-4.5.1-tdm64-1-p2" />
-			<Select id="gcc-c++-4.5.1-tdm64-1" />
-			<Select id="binutils-2.20.51-tdm64-20100816" />
-			<Select id="mingw64-runtime-tdm64-gcc45-svn3485" />
-			<Select id="mingw32-make-3.82-3" />
+			<Select id="gcc-core-4.5.2-tdm64-1" />
+			<Select id="gcc-c++-4.5.2-tdm64-1" />
+			<Select id="binutils-2.21-tdm64-1" />
+			<Select id="mingw64-runtime-tdm64-gcc45-svn3913" />
+			<Select id="mingw32-make-3.82-5" />
 			<Select id="gdb-7.1-tdm64-1" />
 		</InstallType>
 	</System>
