@@ -404,8 +404,6 @@ extern "C" void __declspec(dllexport) SetManifest
 					 TiXmlHandle(minver->FirstChild()).ToText();
 					if (txtel)
 					{
-						//DialogBoxParam(ginstance, MAKEINTRESOURCE(IDD_UPDATEVER),
-						// parentwnd, UpdateVerProc, (LPARAM)txtel->Value());
 						MessageBox(parentwnd, txtel->Value(),
 						 "Updated Version Available",
 						 MB_OK | MB_ICONINFORMATION);
