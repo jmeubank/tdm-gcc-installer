@@ -27,6 +27,7 @@
 			<Version default="true" id="binutils-2.21-3" name="MinGW Stable: 2.21-3" unsize="21407627">
 				<Description>Current Release - binutils-2.21-3</Description>
 				<Archive path="binutils-2.21-3-mingw32-bin.tar.lzma" arcsize="1831972" />
+				<Archive path="libintl-0.17-1-mingw32-dll-8.tar.lzma" arcsize="45508" />
 			</Version>
 		</Component>
 		<Component id="mingw-runtime" name="mingw-runtime">
