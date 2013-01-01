@@ -4,39 +4,39 @@
 		<Description>A standard MinGW-based 32-bit compiler system</Description>
 		<Category id="gcc" name="gcc">
 			<Description>The GNU Compiler Collection (Windows native)</Description>
-			<Version id="gcc-4.6.1-tdm-1" name="TDM-GCC Current: 4.6.1-tdm-1">
-				<Description>GCC 4.6.1 tdm-1: The most recent TDM release of the
-				 GCC 4.5 series, for MinGW, with SJLJ unwinding</Description>
-				<Component base="gcc-core" name="core" id="gcc-core-4.6.1-tdm-1" unsize="41918507">
+			<Version default="true" id="gcc-4.7.1-tdm-1" name="TDM-GCC Current: 4.7.1-tdm-1">
+				<Description>GCC 4.7.1 tdm-1: The most recent TDM release of the
+				 GCC 4.7 series, for MinGW, with SJLJ unwinding</Description>
+				<Component base="gcc-core" name="core" id="gcc-core-4.7.1-tdm-1" unsize="47284616">
 					<Description>Required base files and C support</Description>
-					<Archive path="gcc-4.6.1-tdm-1-core.tar.lzma" arcsize="11162612" />
+					<Archive path="gcc-4.7.1-tdm-1-core.tar.lzma" arcsize="12636632" />
 				</Component>
-				<Component base="gcc-g++" name="g++" id="gcc-c++-4.6.1-tdm-1" unsize="24425693">
+				<Component base="gcc-g++" name="g++" id="gcc-c++-4.7.1-tdm-1" unsize="31084065">
 					<Description>C++ support</Description>
-					<Archive path="gcc-4.6.1-tdm-1-c++.tar.lzma" arcsize="4630516" />
+					<Archive path="gcc-4.7.1-tdm-1-c++.tar.lzma" arcsize="5612861" />
 				</Component>
-				<Component base="gcc-openmp" name="openmp" id="gcc-openmp-4.6.1-tdm-1" unsize="1167276">
+				<Component base="gcc-openmp" name="openmp" id="gcc-openmp-4.7.1-tdm-1" unsize="1357576">
 					<Description>OpenMP support</Description>
-					<Archive path="gcc-4.6.1-tdm-1-openmp.tar.lzma" arcsize="210411" />
+					<Archive path="gcc-4.7.1-tdm-1-openmp.tar.lzma" arcsize="244916" />
 				</Component>
 			</Version>
 		</Category>
 		<Component id="binutils" name="binutils">
 			<Description>GNU Binutils: required for creating executables, DLLs, or
 			 static libraries; includes other miscellaneous tools</Description>
-			<Version default="true" id="binutils-2.21.53-1" name="MinGW Stable: 2.21.53-1" unsize="22238130">
-				<Description>Current Release - binutils-2.21.53-1</Description>
-				<Archive path="binutils-2.21.53-1-mingw32-bin.tar.lzma" arcsize="1885298" />
-				<Archive path="libintl-0.17-1-mingw32-dll-8.tar.lzma" arcsize="45508" />
+			<Version default="true" id="binutils-2.22-1" name="MinGW Stable: 2.22-1" unsize="61060531">
+				<Description>Current Release - binutils-2.22-1</Description>
+				<Archive path="binutils-2.22-1-mingw32-bin.tar.lzma" arcsize="3790918" />
+				<Archive path="libintl-0.18.1.1-2-mingw32-dll-8.tar.lzma" arcsize="45201" />
 			</Version>
 		</Component>
 		<Component id="mingw-runtime" name="mingw-runtime">
 			<Description>Headers and import libraries for Microsoft's C Runtime,
 			 with minimal GNU extensions</Description>
-			<Version default="true" id="mingw-runtime-3.20" name="MinGW Stable: 3.20" unsize="9756436">
-				<Description>Current Release - mingwrt-3.20</Description>
-				<Archive path="mingwrt-3.20-mingw32-dev.tar.gz" arcsize="883690" />
-				<Archive path="mingwrt-3.20-mingw32-dll.tar.gz" arcsize="16073" />
+			<Version default="true" id="mingw-runtime-3.20-2" name="MinGW Stable: 3.20-2" unsize="8834773">
+				<Description>Current Release - mingwrt-3.20-2</Description>
+				<Archive path="mingwrt-3.20-2-mingw32-dev.tar.lzma" arcsize="248801" />
+				<Archive path="mingwrt-3.20-2-mingw32-dll.tar.lzma" arcsize="5705" />
 			</Version>
 		</Component>
 		<Component id="w32api" name="w32api">
@@ -49,29 +49,31 @@
 		</Component>
 		<Component id="mingw32-make" name="mingw32-make">
 			<Description>GNU Make for MinGW (NOT for MSYS)</Description>
-			<Version default="true" id="mingw32-make-3.82-5" name="MinGW Stable: 3.82-5" unsize="1389942">
+			<Version default="true" id="mingw32-make-3.82-5" name="MinGW Stable: 3.82-5" unsize="1953598">
 				<Description>Current Release - mingw32-make-3.82-5</Description>
 				<Archive path="make-3.82-5-mingw32-bin.tar.lzma" arcsize="93652" />
-				<Archive path="libintl-0.17-1-mingw32-dll-8.tar.lzma" arcsize="45508" />
+				<Archive path="libintl-0.18.1.1-2-mingw32-dll-8.tar.lzma" arcsize="45201" />
 				<Archive path="libiconv-1.13.1-1-mingw32-dll-2.tar.lzma" arcsize="549489" />
+				<Archive path="gcc-4.7.1-tdm-1-dw2-libgcc.tar.lzma" arcsize="145000" />
 			</Version>
 		</Component>
 		<Component id="gdb" name="gdb">
 			<Description>GNU source-level debugger</Description>
-			<Version default="true" id="gdb-7.3-2" name="MinGW Stable: 7.3-2" unsize="8160393">
-				<Description>Current Release - gdb-7.3-2</Description>
-				<Archive path="gdb-7.3-2-mingw32-bin.tar.lzma" arcsize="1390799" />
+			<Version default="true" id="gdb-7.5-1" name="MinGW Stable: 7.5-1" unsize="5094520">
+				<Description>Current Release - gdb-7.5-1</Description>
+				<Archive path="gdb-7.5-1-mingw32-bin.tar.lzma" arcsize="1420525" />
 				<Archive path="libexpat-2.0.1-1-mingw32-dll-1.tar.gz" arcsize="62787" />
+				<Archive path="gcc-4.7.1-tdm-1-dw2-libgcc.tar.lzma" arcsize="145000" />
 			</Version>
 		</Component>
 		<InstallType default="true" id="tdmrec" name="TDM-GCC Recommended, C/C++">
-			<Select id="gcc-core-4.6.1-tdm-1" />
-			<Select id="gcc-c++-4.6.1-tdm-1" />
-			<Select id="binutils-2.21.53-1" />
-			<Select id="mingw-runtime-3.20" />
+			<Select id="gcc-core-4.7.1-tdm-1" />
+			<Select id="gcc-c++-4.7.1-tdm-1" />
+			<Select id="binutils-2.22-1" />
+			<Select id="mingw-runtime-3.20-2" />
 			<Select id="w32api-3.17-2" />
 			<Select id="mingw32-make-3.82-5" />
-			<Select id="gdb-7.3-2" />
+			<Select id="gdb-7.5-1" />
 		</InstallType>
 	</System>
 </TDMInstallManifest>
