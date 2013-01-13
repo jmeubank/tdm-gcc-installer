@@ -14,15 +14,18 @@ this file freely.
 
 extern "C" {
 
+#include <errno.h>
+#include <direct.h>
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <windowsx.h>
 #include <commctrl.h>
 #include <shlobj.h>
 #include <sys/stat.h>
+#include <stdio.h>
+#include <errno.h>
 #include <direct.h>
 #include "tdminst_res.h"
-#include "archive_base.h"
 
 } //extern "C"
 
@@ -173,6 +176,48 @@ static void UpdateDescLabel(HTREEITEM hitem, bool force = false)
 		 "Position your mouse over a component to see its description.");
 		Static_Enable(hdesclabel, FALSE);
 	}
+}
+
+
+/* recursive mkdir */
+/* abort on ENOENT; ignore other errors like "directory already exists" */
+/* return 1 if OK */
+/*        0 on error */
+
+static int makedir (const char* base, const char *newdir)
+{
+  char buffer[1024];
+  int blen = strlen(strncpy(buffer, base, 1022));
+  buffer[blen] = '/';
+  int len = blen + strlen(strncpy(buffer + blen + 1, newdir, 1021 - blen));
+  char *p;
+
+  if (len <= 0)
+    return 0;
+  if (buffer[len-1] == '/')
+    buffer[len-1] = '\0';
+  if (_mkdir(buffer) == 0)
+    return 1;
+
+  p = buffer+1;
+  while (1)
+    {
+      char hold;
+
+      while(*p && *p != '\\' && *p != '/')
+        p++;
+      hold = *p;
+      *p = 0;
+      if ((_mkdir(buffer) == -1))
+        {
+          if (errno == ENOENT)
+              return 0;
+        }
+      if (hold == 0)
+        break;
+      *p++ = hold;
+    }
+  return 1;
 }
 
 

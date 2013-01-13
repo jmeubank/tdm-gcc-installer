@@ -18,24 +18,13 @@ this file freely.
 
 
 #include <cstring>
+#include <cstdarg>
+#include <cstdio>
 #include <string>
-extern "C" {
-#include "multiread.h"
-#include "archive_base.h"
-}
 #include "install_manifest.hpp"
 #include "ref.hpp"
-
-
-enum ArcType
-{
-	ARCT_UNKNOWN = 0,
-	ARCT_TAR_GZ,
-	ARCT_TAR_BZ2,
-	ARCT_ZIP,
-	ARCT_7Z,
-	ARCT_TAR_LZMA
-};
+#include <xarc.hpp>
+#include <xarc/xarc_exception.hpp>
 
 
 // Set when InstallArchive is called; called from ArcBeforeCallback to indicate
@@ -47,71 +36,38 @@ int (*ia_callback)(const char*, bool, bool) = 0;
 InstallManifest* inst_man = 0;
 
 
-/* Returns true if file name "file" ends with "ext" */
-static bool HasExtension(const std::string& file, const char* ext)
+static std::string fmt(const char* format_string, ...)
 {
-	size_t elen = strlen(ext);
-	if (file.length() > elen
-	 && stricmp(file.c_str() + file.length() - elen, ext) == 0)
-		return true;
-	return false;
+	char buf[2048];
+	va_list ap;
+	va_start(ap, format_string);
+	vsnprintf(buf, 2048, format_string, ap);
+	va_end(ap);
+	return std::string(buf);
 }
 
-
-/* Called from the various format-specific unpacking functions to indicate that
- * an entry is about to be unpacked. "fpath" is the entry's path (relative to
- * base); is_dir is nonzero if the entry is a directory rather than a file. */
-extern "C" int ArcBeforeCallback(const char* fpath, int is_dir)
+static std::string XarcCombinedErrorString(XARC::ExtractArchive const& xa)
 {
-	if (ia_callback)
-		return ia_callback(fpath, is_dir, false);
-	return 0;
+	return fmt("(%d) %s : %s", xa.GetXarcErrorID(),
+	 xa.GetErrorDescription().c_str(), xa.GetErrorAdditional().c_str());
 }
 
-
-/* Called from the various format-specific unpacking functions to indicate that
- * an entry has been unpacked to disk. "fpath" is the entry's path (relative to
- * base); is_dir is nonzero if the entry is a directory rather than a file. */
-extern "C" void ArcCreateCallback(const char* fpath, int is_dir)
+void InstallArchiveXarcCallback(const std::string& item, uint8_t flags)
 {
-	if (inst_man)
+	if (!inst_man)
+		return;
+	if (flags & XARC_PROP_DIR)
 	{
-		if (is_dir)
-		{
-			// Ensure that the path ends in a slash if it is a directory
-			int plen = strlen(fpath);
-			if (fpath[plen - 1] == '/' || fpath[plen - 1] == '\\')
-				inst_man->AddEntry(fpath);
-			else
-				inst_man->AddEntry((std::string(fpath) + "/").c_str());
-		}
+		// Ensure that the path ends in a slash if it is a directory
+		if (item[item.length() - 1] == '/'
+		 || item[item.length() - 1] == '\\')
+			inst_man->AddEntry(item.c_str());
 		else
-			inst_man->AddEntry(fpath);
+			inst_man->AddEntry((item + "/").c_str());
 	}
-}
-
-
-// defined in untgz.c
-extern "C" int tar
- (MultiReader*,
-  const char*,
-  int (*)(const char*, int),
-  void (*)(const char*, int));
-
-// defined in archive_zip.cpp
-int unzip
- (const char* file,
-  const char* base,
-  int (*before_entry_callback)(const char*, int),
-  void (*create_callback)(const char*, int));
-
-// defined in archive_7z.cpp
-int un7z
- (const char* file,
-  const char* base,
-  int (*before_entry_callback)(const char*, int),
-  void (*create_callback)(const char*, int));
-
+	else
+		inst_man->AddEntry(item.c_str());
+};
 
 /* Unpack an archive to the specified location, with callbacks. "base" is the
  * location to unpack to, "archive" is the file to unpack, "man" is the
@@ -134,129 +90,32 @@ std::string InstallArchive
 	else if (archive.length() < 5)
 		return std::string("Archive name '") + archive + "' is too short.";
 
-	// Determine the archive type by the file's extension
-	ArcType type;
-	if (HasExtension(archive, ".tar.gz")
-	 || HasExtension(archive, ".tgz"))
-		type = ARCT_TAR_GZ;
-	else if (HasExtension(archive, ".tar.bz2")
-	 || HasExtension(archive, ".tbz")
-	 || HasExtension(archive, ".tbz2"))
-		type = ARCT_TAR_BZ2;
-	else if (HasExtension(archive, ".tar.lzma")
-	 || HasExtension(archive, ".tlz"))
-		type = ARCT_TAR_LZMA;
-	else if (HasExtension(archive, ".zip"))
-		type = ARCT_ZIP;
-	else if (HasExtension(archive, ".7z"))
-		type = ARCT_7Z;
-	else
+	try
 	{
-		return std::string("Archive '") + archive +
-		 "' doesn't have a recognized extension";
+		XARC::ExtractArchive xa(archive.c_str());
+		if (!xa.IsOkay())
+			return XarcCombinedErrorString(xa);
+
+		XARC::ExtractItemInfo xi;
+		do
+		{
+			xi = xa.GetItemInfo();
+			if (callback)
+			{
+				if (callback(xi.GetPath().c_str(), xi.IsDirectory() ? 1 : 0,
+				 false) != 0)
+					return fmt("Failed to unpack '%s': cancelled");
+			}
+			if (xa.ExtractItem(base, 0x0, InstallArchiveXarcCallback)
+			 != XARC_OK)
+				return XarcCombinedErrorString(xa);
+		} while (xa.NextItem() == XARC_OK);
+	}
+	catch (XARC::XarcException& e)
+	{
+		return e.GetString();
 	}
 
-	switch (type)
-	{
-	case ARCT_TAR_GZ:
-		{
-			// Create gzip reader and use the "tar" function to unpack
-			RefType< MultiReader >::Ref mr(CreateGZReader(archive.c_str()),
-			 DestroyMultiReader);
-			if (!mr)
-			{
-				return std::string("zlib failed to open file '") + archive +
-				 "'";
-			}
-			int res = tar(RefGetPtr(mr), base, ArcBeforeCallback,
-			 ArcCreateCallback);
-			if (res != 0)
-			{
-				const char* emsg = "cancelled from callback";
-				if (res == -1)
-					emsg = archive_geterror();
-				return std::string("tar failed to untar file '") + archive +
-				 "': " + emsg;
-			}
-		}
-		break;
-	case ARCT_TAR_BZ2:
-		{
-			// Create bzip2 reader and use the tar function to unpack
-			RefType< MultiReader >::Ref mr(CreateBZ2Reader(archive.c_str()),
-			 DestroyMultiReader);
-			if (!mr)
-			{
-				return std::string("bzip2 failed to open file '") + archive +
-				 "'";
-			}
-			int res = tar(RefGetPtr(mr), base, ArcBeforeCallback,
-			 ArcCreateCallback);
-			if (res != 0)
-			{
-				const char* emsg = "cancelled from callback";
-				if (res == -1)
-					emsg = archive_geterror();
-				return std::string("tar failed to untar file '") + archive +
-				 "': " + emsg;
-			}
-		}
-		break;
-	case ARCT_TAR_LZMA:
-		{
-			// Create lzma reader and use the tar function to unpack
-			RefType< MultiReader >::Ref mr(CreateLZMAReader(archive.c_str()),
-			 DestroyMultiReader);
-			if (!mr)
-			{
-				return std::string("lzma failed to open file '") + archive +
-				 "'";
-			}
-			int res = tar(RefGetPtr(mr), base, ArcBeforeCallback,
-			 ArcCreateCallback);
-			if (res != 0)
-			{
-				const char* emsg = "cancelled from callback";
-				if (res == -1)
-					emsg = archive_geterror();
-				return std::string("tar failed to untar file '") + archive +
-				 "': " + emsg;
-			}
-		}
-		break;
-	case ARCT_ZIP:
-		{
-			// Use unzip function to unpack
-			int res = unzip(archive.c_str(), base, ArcBeforeCallback,
-			 ArcCreateCallback);
-			if (res != 0)
-			{
-				const char* emsg = "cancelled from callback";
-				if (res == -1)
-					emsg = archive_geterror();
-				return std::string("minizip failed to unzip file '") + archive +
-				 "': " + emsg;
-			}
-		}
-		break;
-	case ARCT_7Z:
-		{
-			// Use un7z function to unpack
-			int res = un7z(archive.c_str(), base, ArcBeforeCallback,
-			 ArcCreateCallback);
-			if (res != 0)
-			{
-				const char* emsg = "cancelled from callback";
-				if (res == -1)
-					emsg = archive_geterror();
-				return std::string("7zlib failed to unpack '") + archive +
-				 "': " + emsg;
-			}
-		}
-		break;
-	default:
-		break;
-	}
 	return "OK";
 }
 

@@ -11,6 +11,7 @@
 				<Option type="4" />
 				<Option compiler="gcc" />
 				<Option host_application="tdm-mingw-setup.exe" />
+				<Option run_host_application_in_terminal="0" />
 				<Compiler>
 					<Add option="-Os" />
 				</Compiler>
@@ -34,82 +35,13 @@
 			<Add library="comctl32" />
 			<Add directory="$(#tinyxml)" />
 		</Linker>
-		<Unit filename="7z\7zBuf.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="7z\7zCrc.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="7z\7zCrcOpt.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="7z\7zDec.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="7z\7zFile.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="7z\7zIn.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="7z\7zStream.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="7z\Bcj2.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="7z\Bra86.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="7z\CpuArch.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="7z\Lzma2Dec.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="7z\LzmaDec.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="7z\README.txt" />
-		<Unit filename="7z\Util\7z\7zAlloc.c">
-			<Option compilerVar="CC" />
-		</Unit>
 		<Unit filename="GCC-VERSION.txt" />
 		<Unit filename="Makefile" />
 		<Unit filename="README.TDMInstall.txt" />
 		<Unit filename="SETUP-VERSION.txt" />
 		<Unit filename="archive.cpp" />
-		<Unit filename="archive_7z.cpp" />
-		<Unit filename="archive_base.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="archive_base.h" />
-		<Unit filename="archive_zip.cpp">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="boost\LICENSE_1_0.txt" />
-		<Unit filename="boost\MODIFIED_BOOST.txt" />
-		<Unit filename="bzip2\LICENSE" />
-		<Unit filename="bzip2\MODIFIED_BZIP2.txt">
-			<Option target="&lt;{~None~}&gt;" />
-		</Unit>
-		<Unit filename="bzip2\README" />
-		<Unit filename="bzip2\bzlib.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="bzip2\bzlib.h" />
-		<Unit filename="bzip2\crctable.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="bzip2\decompress.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="bzip2\huffman.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="bzip2\randtable.c">
-			<Option compilerVar="CC" />
-		</Unit>
+		<Unit filename="boost/LICENSE_1_0.txt" />
+		<Unit filename="boost/MODIFIED_BOOST.txt" />
 		<Unit filename="componentstree.cpp" />
 		<Unit filename="componentstree.hpp" />
 		<Unit filename="config.h" />
@@ -123,16 +55,9 @@
 		<Unit filename="main.nsh">
 			<Option target="&lt;{~None~}&gt;" />
 		</Unit>
-		<Unit filename="multiread.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="multiread.h" />
-		<Unit filename="multiread_lzma.c">
-			<Option compilerVar="CC" />
-		</Unit>
 		<Unit filename="nsis_interface.cpp" />
 		<Unit filename="nsis_interface.hpp" />
-		<Unit filename="plugins\README-plugins.txt">
+		<Unit filename="plugins/README-plugins.txt">
 			<Option target="&lt;{~None~}&gt;" />
 		</Unit>
 		<Unit filename="ref.hpp" />
@@ -150,55 +75,6 @@
 		<Unit filename="tinyxml.h" />
 		<Unit filename="tinyxmlerror.cpp" />
 		<Unit filename="tinyxmlparser.cpp" />
-		<Unit filename="untgz.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="zlib\MODIFIED_ZLIB.txt" />
-		<Unit filename="zlib\adler32.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="zlib\contrib\minizip\ioapi.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="zlib\contrib\minizip\ioapi.h" />
-		<Unit filename="zlib\contrib\minizip\unzip.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="zlib\contrib\minizip\unzip.h" />
-		<Unit filename="zlib\crc32.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="zlib\crc32.h" />
-		<Unit filename="zlib\deflate.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="zlib\deflate.h" />
-		<Unit filename="zlib\gzio.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="zlib\inffast.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="zlib\inffast.h" />
-		<Unit filename="zlib\inffixed.h" />
-		<Unit filename="zlib\inflate.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="zlib\inflate.h" />
-		<Unit filename="zlib\inftrees.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="zlib\inftrees.h" />
-		<Unit filename="zlib\trees.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="zlib\trees.h" />
-		<Unit filename="zlib\zconf.h" />
-		<Unit filename="zlib\zlib.h" />
-		<Unit filename="zlib\zutil.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="zlib\zutil.h" />
 		<Extensions>
 			<code_completion />
 			<debugger />
