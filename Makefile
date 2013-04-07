@@ -3,7 +3,7 @@
 
 
 XARC = ..\xarc
-XZ = C:\JSupport\xz-install
+XZ = F:\JSupport\xz-install
 
 TDM_GCC_VER := $(strip $(shell type GCC-VERSION.txt))
 
