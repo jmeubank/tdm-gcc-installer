@@ -79,6 +79,8 @@ Var system_id
 
 
 ;;; UI settings
+!define MUI_ICON "tdm_icon_48.ico"
+!define MUI_UNICON "tdm_icon_48.ico"
 !define MUI_HEADERIMAGE
 !define MUI_HEADERIMAGE_BITMAP "header1.bmp"
 !define MUI_HEADERIMAGE_RIGHT
@@ -1021,36 +1023,36 @@ Push $R2 ;file #2 path
 Push $R3 ;file #2 handle
 Push $R4 ;data
 Push $R5
- 
+
  FileOpen $R1 $R0 r
  GetTempFileName $R2
  FileOpen $R3 $R2 w
- 
+
  loopRead:
   ClearErrors
-  FileRead $R1 $R4 
+  FileRead $R1 $R4
   IfErrors doneRead
- 
+
    StrCpy $R5 $R4 1 -1
    StrCmp $R5 $\n 0 +4
    StrCpy $R5 $R4 1 -2
    StrCmp $R5 $\r +3
    StrCpy $R4 $R4 -1
    StrCpy $R4 "$R4$\r$\n"
- 
+
   FileWrite $R3 $R4
- 
+
  Goto loopRead
  doneRead:
- 
+
  FileClose $R3
  FileClose $R1
- 
+
  SetDetailsPrint none
  Delete $R0
  Rename $R2 $R0
  SetDetailsPrint both
- 
+
 Pop $R5
 Pop $R4
 Pop $R3
