@@ -380,7 +380,7 @@ static INT_PTR CALLBACK UpdateVerProc
 {
 	switch (uMsg)
 	{
-	case WM_INITDIALOG: 
+	case WM_INITDIALOG:
 		{
 			// Get the owner window and dialog box rectangles.
 			HWND hwndOwner = GetParent(hwndDlg);
@@ -785,13 +785,14 @@ StringType InstallArchive
  (const char* base,
   const StringType&,
   InstallManifest&,
-  int (*)(const char*, bool, bool));
+  int (*)(const char*, bool, bool, bool));
 static nsFunction ra_cb_func = 0;
 
-static int RAOnCallback(const char* file, bool is_dir, bool is_del)
+static int RAOnCallback(const char* file, bool is_dir, bool is_del, bool is_arc)
 {
 	if (ra_cb_func > 0)
 	{
+		NSIS::pushint(is_arc ? 1 : 0);
 		NSIS::pushint(is_del ? 1 : 0);
 		NSIS::pushint(is_dir ? 1 : 0);
 		NSIS::pushstring(file);
@@ -815,7 +816,7 @@ static void RemoveEntry(const char* base, const char* entry)
 		int ret = remove(ent);
 		if (ret != 0 && ret != ENOENT)
 			return;
-		RAOnCallback(entry, false, true);
+		RAOnCallback(entry, false, true, false);
 	}
 	for (int i = flen - 1; i > blen + 1; --i)
 	{
@@ -825,7 +826,7 @@ static void RemoveEntry(const char* base, const char* entry)
 			int ret = _rmdir(ent);
 			if (ret != 0 && ret != ENOENT)
 				return;
-			RAOnCallback(ent + blen + 1, true, true);
+			RAOnCallback(ent + blen + 1, true, true, false);
 		}
 	}
 }
@@ -936,6 +937,7 @@ extern "C" void __declspec(dllexport) RemoveAndAdd
 				}
 				if (it != local_paths.end())
 				{
+				    RAOnCallback(ar_path + at + 1, false, false, true);
 					result = InstallArchive(inst_loc.c_str(),
 					 (*it + "\\" + (ar_path + at + 1)).c_str(),
 					 *RefGetPtr(inst_man),
@@ -1102,7 +1104,7 @@ static INT_PTR CALLBACK InstFindProc
 {
 	switch (uMsg)
 	{
-	case WM_INITDIALOG: 
+	case WM_INITDIALOG:
 		{
 			// Get the owner window and dialog box rectangles.
 			HWND hwndOwner = GetParent(hwndDlg);
@@ -1136,14 +1138,14 @@ static DWORD WINAPI InstFindDlgThread(LPVOID lpParameter)
 	HWND hdlg = (HWND)lpParameter;
 	BOOL bRet;
 	MSG msg;
-	while ((bRet = GetMessage(&msg, hdlg, 0, 0)) != 0) 
+	while ((bRet = GetMessage(&msg, hdlg, 0, 0)) != 0)
 	{
 		if (bRet == -1)
 			return -1;
 		else if (!IsWindow(hdlg) || !IsDialogMessage(hdlg, &msg))
 		{
-			TranslateMessage(&msg); 
-			DispatchMessage(&msg); 
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
 		}
 	}
 	return 0;

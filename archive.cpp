@@ -29,7 +29,7 @@ this file freely.
 
 // Set when InstallArchive is called; called from ArcBeforeCallback to indicate
 // that an entry is about to be unpacked
-int (*ia_callback)(const char*, bool, bool) = 0;
+int (*ia_callback)(const char*, bool, bool, bool) = 0;
 
 // Set when InstallArchive is called; entries are added to it in
 // ArcCreateCallback
@@ -80,7 +80,7 @@ std::string InstallArchive
  (const char* base,
   const std::string& archive,
   InstallManifest& man,
-  int (*callback)(const char*, bool, bool))
+  int (*callback)(const char*, bool, bool, bool))
 {
 	ia_callback = callback;
 	inst_man = &man;
@@ -103,7 +103,7 @@ std::string InstallArchive
 			if (callback)
 			{
 				if (callback(xi.GetPath().c_str(), xi.IsDirectory() ? 1 : 0,
-				 false) != 0)
+				 false, false) != 0)
 					return fmt("Failed to unpack '%s': cancelled");
 			}
 			if (xa.ExtractItem(base, 0x0, InstallArchiveXarcCallback)

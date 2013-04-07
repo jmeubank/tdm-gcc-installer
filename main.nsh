@@ -474,18 +474,20 @@ Function ItemBeforeActionCallback
 	Var /GLOBAL ibec_path
 	Var /GLOBAL ibec_isdir
 	Var /GLOBAL ibec_isdel
+	Var /GLOBAL ibec_isarchive
 	Pop $ibec_path
 	Pop $ibec_isdir
 	Pop $ibec_isdel
+	Pop $ibec_isarchive
 
 	${If} "$ibec_isdel" == 1
 		DetailPrint "Removing '$ibec_path'"
+	${ElseIf} "$ibec_isarchive" == 1
+        DetailPrint "Unpacking '$ibec_path'"
+	${ElseIf} "$ibec_isdir" == 1
+		DetailPrint "Creating '$ibec_path'"
 	${Else}
-		${If} "$ibec_isdir" == 1
-			DetailPrint "Creating '$ibec_path'"
-		${Else}
-			DetailPrint "Extracting '$ibec_path'"
-		${EndIf}
+		DetailPrint "Writing '$ibec_path'"
 	${EndIf}
 
 	tdminstall::GetInstallProgress /NOUNLOAD ; Pushes...
