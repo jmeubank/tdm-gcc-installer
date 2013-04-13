@@ -364,7 +364,11 @@ Function .onInit
 	StrCpy $working_manifest "$PLUGINSDIR\${INNER_MANIFEST}"
 	StrCpy $num_prev_insts 0
 	StrCpy $man_msg ""
+!ifdef INNER_COMPONENTS
+	StrCpy $system_id "${INNER_COMPONENTS_SYS}"
+!else
 	StrCpy $system_id "tdm32"
+!endif
 	tdminstall::BeginInstFindBanner /NOUNLOAD
 	tdminstall::UpdateFoundInsts /NOUNLOAD \
 	 "$APPDATA\${APPDATA_SUBFOLDER}\installations.txt"
