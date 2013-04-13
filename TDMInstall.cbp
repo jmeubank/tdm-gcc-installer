@@ -40,6 +40,8 @@
 		<Unit filename="README.TDMInstall.txt" />
 		<Unit filename="SETUP-VERSION.txt" />
 		<Unit filename="archive.cpp" />
+		<Unit filename="arcout.template.txt" />
+		<Unit filename="arcreg.template.txt" />
 		<Unit filename="boost/LICENSE_1_0.txt" />
 		<Unit filename="boost/MODIFIED_BOOST.txt" />
 		<Unit filename="componentstree.cpp" />
