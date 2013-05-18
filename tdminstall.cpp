@@ -1730,8 +1730,7 @@ extern "C" void __declspec(dllexport) EnsureInPathEnv
  int string_size,
  char *variables,
  stack_t **stacktop,
- extra_parameters *extra)
-{
+ extra_parameters *extra) {
 	NSIS::UpdateParams(string_size, variables, stacktop, extra);
 
 	StringType path = NSIS::popstring();
@@ -1739,55 +1738,47 @@ extern "C" void __declspec(dllexport) EnsureInPathEnv
 
 	StringType ret = "OK";
 
-	do
-	{
+	do {
 		HKEY base_key = HKEY_CURRENT_USER;
 		const char* base_path = "Environment";
-		if (mui_mode == "AllUsers")
-		{
+		if (mui_mode == "AllUsers") {
 			base_key = HKEY_LOCAL_MACHINE;
 			base_path = "SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment";
 		}
 		HKEY this_key;
 		if (RegOpenKeyEx(base_key, base_path, 0, MaybeWOW64Flag() | KEY_READ,
-		 &this_key) != ERROR_SUCCESS)
-		{
+		 &this_key) != ERROR_SUCCESS) {
 			ret = "Failed to open PATH setting in registry";
 			break;
 		}
+		StringType current_path;
 		DWORD value_size = 0;
 		if (RegQueryValueEx(this_key, "Path", 0, 0, 0, &value_size)
-		 != ERROR_SUCCESS)
-		{
-			ret = "Failed to query length of PATH variable in registry";
-			break;
+		 == ERROR_SUCCESS) {
+			TCHAR value_buf[value_size + 1];
+			if (RegQueryValueEx(this_key, "Path", 0, 0, (BYTE*)value_buf,
+			 &value_size) != ERROR_SUCCESS) {
+				ret = "Failed to retrieve PATH setting from registry";
+				break;
+			}
+			value_buf[value_size] = 0;
+			current_path = value_buf;
+			if (current_path.find(path) != StringType::npos)
+				break;
+			if (current_path.length() > 0)
+				current_path += ";";
 		}
-		TCHAR value_buf[value_size + 1];
-		if (RegQueryValueEx(this_key, "Path", 0, 0, (BYTE*)value_buf,
-		 &value_size) != ERROR_SUCCESS)
-		{
-			ret = "Failed to retrieve PATH setting from registry";
-			break;
-		}
-		value_buf[value_size] = 0;
-		StringType current_path = value_buf;
-		if (current_path.find(path) != StringType::npos)
-			break;
-		if (current_path.length() > 0)
-			current_path += ";";
 		current_path += path;
 		HKEY write_key;
 		if (RegCreateKeyEx(base_key, base_path, 0, 0, 0,
-		 MaybeWOW64Flag() | KEY_WRITE, 0, &write_key, 0) != ERROR_SUCCESS)
-		{
+		 MaybeWOW64Flag() | KEY_WRITE, 0, &write_key, 0) != ERROR_SUCCESS) {
 			ret = "Failed to open PATH registry setting with write privileges";
 			break;
 		}
 		if (RegSetValueEx(write_key, "Path", 0, REG_EXPAND_SZ,
 		 (const BYTE*)current_path.c_str(),
 		 (current_path.length() + 1) * sizeof(CharType))
-		  != ERROR_SUCCESS)
-		{
+		  != ERROR_SUCCESS) {
 			ret = "Failed to write new PATH setting to registry";
 			break;
 		}
