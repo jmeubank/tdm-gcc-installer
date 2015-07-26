@@ -468,6 +468,59 @@ extern "C" void __declspec(dllexport) SetManifest
 }
 
 
+extern "C" void __declspec(dllexport) GetTidbits
+(HWND hwndParent,
+ int string_size,
+ char *variables,
+ stack_t **stacktop,
+ extra_parameters *extra)
+{
+	NSIS::UpdateParams(string_size, variables, stacktop, extra);
+	StringType system_id = NSIS::popstring();
+	StringType tempdir = NSIS::popstring();
+	StringType title;
+	StringType desc;
+	StringType content;
+	do {
+		if (!working_man)
+			break;
+		TiXmlElement* system_el = working_man->RootElement()->FirstChildElement("System");
+		for (; system_el; system_el = system_el->NextSiblingElement("System")) {
+			if (strcmp(system_el->Attribute("id"), system_id.c_str()) == 0)
+				break;
+		}
+		if (!system_el)
+			break;
+		TiXmlElement* tidbit_el = system_el->FirstChildElement("Tidbit");
+		if (!tidbit_el)
+			break;
+		TiXmlText* txtnode = TiXmlHandle(tidbit_el->FirstChildElement("Title"))
+		.FirstChild().ToText();
+		if (txtnode)
+			title = txtnode->Value();
+		txtnode = TiXmlHandle(tidbit_el->FirstChildElement("Description"))
+		.FirstChild().ToText();
+		if (txtnode)
+			desc = txtnode->Value();
+		txtnode = TiXmlHandle(tidbit_el->FirstChildElement("Content"))
+		.FirstChild().ToText();
+		if (txtnode) {
+			StringType cfile = tempdir + "\\tidbit-" + system_id + ".txt";
+			FILE* f = fopen(cfile.c_str(), "wb");
+			if (!f)
+				break;
+			content = txtnode->Value();
+			fwrite(content.c_str(), content.length(), 1, f);
+			fclose(f);
+			content = cfile;
+		}
+	} while (false);
+	NSIS::pushstring(title.c_str());
+	NSIS::pushstring(desc.c_str());
+	NSIS::pushstring(content.c_str());
+}
+
+
 static void SelectWithChildren(const TiXmlElement* el)
 {
 	std::queue< const TiXmlElement* > eq;

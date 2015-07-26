@@ -11,14 +11,14 @@
 ; Ephemeral settings
 !searchparse /file SETUP-VERSION.txt "" SETUP_VER
 !define SHORTNAME "TDM-GCC"
-!define DEF_INST_DIR_32 "\MinGW32"
-!define DEF_INST_DIR_64 "\MinGW64"
+!define DEF_INST_DIR_32 "\TDM-GCC-32"
+!define DEF_INST_DIR_64 "\TDM-GCC-64"
 !define INNER_MANIFEST "inner-manifest.txt"
 !define LOCAL_NET_MANIFEST "net-manifest.txt"
 !define NET_MANIFEST_URL "http://tdragon.net/tdminst/net-manifest.txt"
 !define APPDATA_SUBFOLDER "TDM-GCC"
-!define STARTMENU_ENTRY_32 "MinGW32"
-!define STARTMENU_ENTRY_64 "MinGW64"
+!define STARTMENU_ENTRY_32 "TDM-GCC-32"
+!define STARTMENU_ENTRY_64 "TDM-GCC-64"
 !define UNINSTKEY "TDM-GCC"
 !define READMEFILE_32 "README-gcc-tdm.txt"
 !define READMEFILE_64 "README-gcc-tdm64.txt"
@@ -94,6 +94,8 @@ Var system_id
 Page custom WizardAction_Create WizardAction_Leave
 
 Page custom EditionSelect_Create EditionSelect_Leave
+
+Page custom Tidbits_Create Tidbits_Leave
 
 !define MUI_DIRECTORYPAGE_VARIABLE $inst_dir
 !define MUI_PAGE_CUSTOMFUNCTION_SHOW InstDir_Show
@@ -802,6 +804,38 @@ FunctionEnd
 
 Function EditionSelect_OnClick64
 	StrCpy $system_id "tdm64"
+FunctionEnd
+
+
+Function Tidbits_Create
+	${If} "$setup_type" == "manage"
+	${OrIf} "$setup_type" == "remove"
+		Abort
+	${EndIf}
+
+	tdminstall::GetTidbits /NOUNLOAD "$system_id" "$PLUGINSDIR"
+	Pop $3
+	Pop $4
+	Pop $5
+	${If} "$5" == ""
+		Abort
+	${EndIf}
+
+	!insertmacro MUI_HEADER_TEXT "$5" "$4"
+
+	nsDialogs::Create /NOUNLOAD 1018
+	Pop $0
+
+	nsDialogs::CreateControl /NOUNLOAD RichEdit20A \
+	 ${WS_VISIBLE}|${WS_CHILD}|${WS_TABSTOP}|${WS_VSCROLL}|${ES_MULTILINE}|${ES_WANTRETURN} \
+	 ${__NSD_Text_EXSTYLE} 0 0 100% -24u ""
+	Pop $0
+	nsRichEdit::Load $0 "$3"
+
+	nsDialogs::Show
+FunctionEnd
+
+Function Tidbits_Leave
 FunctionEnd
 
 
