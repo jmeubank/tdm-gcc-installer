@@ -16,17 +16,17 @@ this file freely.
 #define REF_HPP_INC
 
 
-#include "boost/shared_ptr.hpp"
+#include <memory>
 
 
 template< class T >
 struct RefType
 {
-	typedef boost::shared_ptr< T > Ref;
+	typedef std::shared_ptr< T > Ref;
 };
 
 template< class T >
-inline static T* RefGetPtr(const boost::shared_ptr< T >& p)
+inline static T* RefGetPtr(const std::shared_ptr< T >& p)
 {
 	return p.get();
 }

@@ -2,8 +2,9 @@
 # Created: JohnE, 2008-07-28
 
 
-XARC = ..\xarc
-XZ = F:\JSupport\xz-install
+XARC_SRC = ../xarc
+XARC_LIB = ../build-xarc
+XZ_LIB = ../build-xarc/xz-prefix/src/xz/bin_i686-sse2
 
 TDM_GCC_VER := $(strip $(shell type GCC-VERSION.txt))
 
@@ -17,17 +18,17 @@ CC = gcc
 CFLAGS = -Wall -Os -I. -m32
 #CFLAGS = -Wall -g -I. -m32
 CXX = g++
-CXXFLAGS = -Wall -Os -I. -m32
+CXXFLAGS = -Wall -Os -I. -m32 -std=gnu++11
 #CXXFLAGS = -Wall -g -I. -m32
 LD = g++
-LDFLAGS = -s -m32
+LDFLAGS = -s -m32 -std=gnu++11
 #LDFLAGS = -m32
 RC = windres
 RCFLAGS = -F pe-i386
 
-CFLAGS += -I$(XARC)/include -I$(XZ)/include
-CXXFLAGS += -I$(XARC)/include -I$(XZ)/include
-LDFLAGS += -L$(XARC)/lib -L$(XZ)/lib
+CFLAGS += -I$(XARC_SRC)/include
+CXXFLAGS += -I$(XARC_SRC)/include
+LDFLAGS += -L$(XARC_LIB) -L$(XZ_LIB)
 
 .PHONY: all clean cleanall
 
@@ -91,9 +92,11 @@ TDMINSTDLL_ADDL_DEPENDS = \
  ref.hpp \
  tdminst_res.h
 
+*.o: $(TDMINSTDLL_ADDL_DEPENDS)
+
 $(TDMINSTDLL): $(TDMINSTDLLSOURCES) $(TDMINSTDLL_ADDL_DEPENDS)
 	$(LD) -shared -Wl,--dll $(LDFLAGS) -o $(TDMINSTDLL) $(TDMINSTDLLSOURCES) \
-	 -lxarc_cxx -lxarc -lz_min -l7z_min -lbz2_min -llzma -lgdi32 -lcomctl32
+	 -lxarc -llzma -lgdi32 -lcomctl32
 
 tdminst_res.o: tdminst_res.rc tdminst_res.h
 	$(RC) $(RCFLAGS) tdminst_res.rc tdminst_res.o
