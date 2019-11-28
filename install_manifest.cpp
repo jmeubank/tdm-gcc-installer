@@ -23,16 +23,15 @@ this file freely.
 InstallManifest::InstallManifest(const StringType& loadfile)
  : cur_comp(entry_setmap.end())
 {
-	TiXmlDocument doc(loadfile.c_str());
-	if (doc.LoadFile())
+	if (doc.LoadFile(loadfile.c_str()))
 	{
-		std::list< TiXmlElement* > search_els;
+		std::list< tinyxml2::XMLElement* > search_els;
 		search_els.push_back(doc.RootElement());
 		while (!search_els.empty())
 		{
-			TiXmlElement* el = search_els.front();
+			tinyxml2::XMLElement* el = search_els.front();
 			search_els.pop_front();
-			TiXmlElement* ent = el->FirstChildElement("Entry");
+			tinyxml2::XMLElement* ent = el->FirstChildElement("Entry");
 			if (ent)
 			{
 				const char* cid = el->Attribute("id");
@@ -45,7 +44,7 @@ InstallManifest::InstallManifest(const StringType& loadfile)
 			}
 			else
 			{
-				for (TiXmlElement* child = el->FirstChildElement();
+				for (tinyxml2::XMLElement* child = el->FirstChildElement();
 				 child;
 				 child = child->NextSiblingElement())
 					search_els.push_back(child);
@@ -55,14 +54,14 @@ InstallManifest::InstallManifest(const StringType& loadfile)
 }
 
 
-const TiXmlElement* InstallManifest::GetComponent(const StringType& comp_id) const
+const tinyxml2::XMLElement* InstallManifest::GetComponent(const StringType& comp_id) const
 {
 	EntrySetMap::const_iterator found = entry_setmap.find(comp_id);
 	return (found == entry_setmap.end()) ? 0 : found->second.first;
 }
 
 
-TiXmlElement* InstallManifest::SetComponent(const StringType& comp_id)
+tinyxml2::XMLElement* InstallManifest::SetComponent(const StringType& comp_id)
 {
 	EntrySetMap::iterator found = entry_setmap.find(comp_id);
 	if (found != entry_setmap.end())
@@ -72,7 +71,7 @@ TiXmlElement* InstallManifest::SetComponent(const StringType& comp_id)
 	}
 	else
 	{
-		TiXmlElement* new_comp = new TiXmlElement("Component");
+		tinyxml2::XMLElement* new_comp = doc.NewElement("Component");
 		new_comp->SetAttribute("id", comp_id.c_str());
 		cur_comp = entry_setmap.insert(
 		 std::make_pair(
@@ -91,9 +90,9 @@ void InstallManifest::AddEntry(const char* entry)
 		return;
 	if (cur_comp->second.second.insert(entry).second)
 	{
-		TiXmlElement* ent_el = new TiXmlElement("Entry");
-		TiXmlText* ent_txt = new TiXmlText(entry);
-		ent_txt->SetCDATA(true);
+		tinyxml2::XMLElement* ent_el = doc.NewElement("Entry");
+		tinyxml2::XMLText* ent_txt = doc.NewText(entry);
+		ent_txt->SetCData(true);
 		ent_el->LinkEndChild(ent_txt);
 		cur_comp->second.first->LinkEndChild(ent_el);
 	}

@@ -19,7 +19,7 @@ this file freely.
 #include <string>
 #include <set>
 #include <map>
-#include "tinyxml.h"
+#include <tinyxml2.h>
 
 
 typedef std::string StringType;
@@ -30,14 +30,15 @@ class InstallManifest
 public:
 	InstallManifest(const StringType& loadfile = StringType());
 
-	const TiXmlElement* GetComponent(const StringType& comp_id) const;
-	TiXmlElement* SetComponent(const StringType& comp_id);
+	const tinyxml2::XMLElement* GetComponent(const StringType& comp_id) const;
+	tinyxml2::XMLElement* SetComponent(const StringType& comp_id);
 	void AddEntry(const char* entry);
 
 private:
-	typedef std::map< std::string, std::pair< TiXmlElement*, std::set< std::string > > > EntrySetMap;
+	typedef std::map< std::string, std::pair< tinyxml2::XMLElement*, std::set< std::string > > > EntrySetMap;
 	EntrySetMap entry_setmap;
 	EntrySetMap::iterator cur_comp;
+	tinyxml2::XMLDocument doc;
 };
 
 

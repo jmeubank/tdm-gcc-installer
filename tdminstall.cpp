@@ -35,17 +35,18 @@ extern "C" {
 #include <string>
 #include <map>
 #include <list>
-#include "tinyxml.h"
+#include <tinyxml2.h>
 #include "install_manifest.hpp"
 #include "ref.hpp"
 #include "componentstree.hpp"
 #include "nsis_interface.hpp"
 #include "config.h"
 
+using namespace tinyxml2;
 
 typedef char CharType;
 typedef std::string StringType;
-typedef RefType< TiXmlDocument >::Ref TiXmlDocumentRef;
+typedef RefType< XMLDocument >::Ref XMLDocumentRef;
 
 
 static HINSTANCE ginstance;
@@ -72,7 +73,7 @@ static HWND hdirpagedir = 0;
 static HWND hdirlist;
 static nsFunction previnstsel_callback = 0;
 static HWND hsizelabel = 0;
-static TiXmlDocumentRef working_man, prev_man;
+static XMLDocumentRef working_man, prev_man;
 
 static int num_addremove_ops;
 static int cur_op_index;
@@ -83,7 +84,7 @@ int num_files_in_cur_op = 0;
 
 static ComponentsTree ctree;
 
-static std::vector< TiXmlElement* > itypes_by_index;
+static std::vector< XMLElement* > itypes_by_index;
 static int cur_itype = -1;
 static int itype_custom = -1, itype_current = -1;
 
@@ -433,10 +434,10 @@ extern "C" void __declspec(dllexport) SetManifest
 	StringType fname = NSIS::popstring();
 	HWND parentwnd = (HWND)NSIS::popint();
 
-	working_man = TiXmlDocumentRef(new TiXmlDocument(fname.c_str()));
-	if (working_man->LoadFile())
+	working_man = XMLDocumentRef(new XMLDocument);
+	if (working_man->LoadFile(fname.c_str()))
 	{
-		TiXmlElement* minver =
+		XMLElement* minver =
 		 working_man->RootElement()->FirstChildElement("MinVersion");
 		if (minver)
 		{
@@ -445,8 +446,8 @@ extern "C" void __declspec(dllexport) SetManifest
 			{
 				if (VersionCompare(STR_SETUP_VER, ver) < 0)
 				{
-					TiXmlText* txtel =
-					 TiXmlHandle(minver->FirstChild()).ToText();
+					XMLText* txtel =
+					 XMLHandle(minver->FirstChild()).ToText();
 					if (txtel)
 					{
 						MessageBox(parentwnd, txtel->Value(),
@@ -460,7 +461,7 @@ extern "C" void __declspec(dllexport) SetManifest
 	}
 	else
 	{
-		working_man = TiXmlDocumentRef();
+		working_man = 0;
 		ret = "bad XML";
 	}
 
@@ -484,25 +485,25 @@ extern "C" void __declspec(dllexport) GetTidbits
 	do {
 		if (!working_man)
 			break;
-		TiXmlElement* system_el = working_man->RootElement()->FirstChildElement("System");
+		XMLElement* system_el = working_man->RootElement()->FirstChildElement("System");
 		for (; system_el; system_el = system_el->NextSiblingElement("System")) {
 			if (strcmp(system_el->Attribute("id"), system_id.c_str()) == 0)
 				break;
 		}
 		if (!system_el)
 			break;
-		TiXmlElement* tidbit_el = system_el->FirstChildElement("Tidbit");
+		XMLElement* tidbit_el = system_el->FirstChildElement("Tidbit");
 		if (!tidbit_el)
 			break;
-		TiXmlText* txtnode = TiXmlHandle(tidbit_el->FirstChildElement("Title"))
+		XMLText* txtnode = XMLHandle(tidbit_el->FirstChildElement("Title"))
 		.FirstChild().ToText();
 		if (txtnode)
 			title = txtnode->Value();
-		txtnode = TiXmlHandle(tidbit_el->FirstChildElement("Description"))
+		txtnode = XMLHandle(tidbit_el->FirstChildElement("Description"))
 		.FirstChild().ToText();
 		if (txtnode)
 			desc = txtnode->Value();
-		txtnode = TiXmlHandle(tidbit_el->FirstChildElement("Content"))
+		txtnode = XMLHandle(tidbit_el->FirstChildElement("Content"))
 		.FirstChild().ToText();
 		if (txtnode) {
 			StringType cfile = tempdir + "\\tidbit-" + system_id + ".txt";
@@ -521,13 +522,13 @@ extern "C" void __declspec(dllexport) GetTidbits
 }
 
 
-static void SelectWithChildren(const TiXmlElement* el)
+static void SelectWithChildren(const XMLElement* el)
 {
-	std::queue< const TiXmlElement* > eq;
+	std::queue< const XMLElement* > eq;
 	eq.push(el);
 	while (!eq.empty())
 	{
-		const TiXmlElement* el = eq.front();
+		const XMLElement* el = eq.front();
 		eq.pop();
 		if (!el)
 			continue;
@@ -544,7 +545,7 @@ static void SelectWithChildren(const TiXmlElement* el)
 					ctree.SetSelected(el_index, true);
 			}
 		}
-		for (const TiXmlElement* c = el->FirstChildElement();
+		for (const XMLElement* c = el->FirstChildElement();
 		 c;
 		 c = c->NextSiblingElement())
 			eq.push(c);
@@ -560,11 +561,11 @@ static void UpdateInstallType()
 		ctree.SetPrevInstSelected();
 	else
 	{
-		TiXmlElement* it_el = itypes_by_index[cur_itype];
+		XMLElement* it_el = itypes_by_index[cur_itype];
 		if (it_el)
 		{
 			ctree.DeselectAll();
-			for (TiXmlElement* sel_el = it_el->FirstChildElement();
+			for (XMLElement* sel_el = it_el->FirstChildElement();
 			 sel_el;
 			 sel_el = sel_el->NextSiblingElement())
 			{
@@ -609,7 +610,7 @@ extern "C" void __declspec(dllexport) PopulateInstallTypeList
 	hitypecb = (HWND)NSIS::popint();
 	int is_previnst = NSIS::popint();
 
-	TiXmlElement* sys_el = TiXmlHandle(working_man->RootElement()).FirstChildElement("System").ToElement();
+	XMLElement* sys_el = XMLHandle(working_man->RootElement()).FirstChildElement("System").ToElement();
 	while (sys_el)
 	{
 		const char* id = sys_el->Attribute("id");
@@ -623,7 +624,7 @@ extern "C" void __declspec(dllexport) PopulateInstallTypeList
 	itypes_by_index.clear();
 	itype_current = -1;
 	itype_custom = -1;
-	for (TiXmlElement* itype = sys_el->FirstChildElement("InstallType");
+	for (XMLElement* itype = sys_el->FirstChildElement("InstallType");
 	 itype;
 	 itype = itype->NextSiblingElement("InstallType"))
 	{
@@ -662,7 +663,7 @@ extern "C" void __declspec(dllexport) CreateComponentsTree
 	{
 		if (!prev_man)
 			return;
-		TiXmlElement* sys_el = prev_man->RootElement()->FirstChildElement("System");
+		XMLElement* sys_el = prev_man->RootElement()->FirstChildElement("System");
 		if (!sys_el)
 			return;
 		const char* sys_id = sys_el->Attribute("id");
@@ -722,7 +723,7 @@ extern "C" void __declspec(dllexport) PopulateMirrorList
 	HWND hlist = (HWND)NSIS::popint();
 
 	mirrors.clear();
-	for (TiXmlElement* mir = TiXmlHandle(working_man->RootElement()).FirstChildElement("Mirror").ToElement();
+	for (XMLElement* mir = XMLHandle(working_man->RootElement()).FirstChildElement("Mirror").ToElement();
 	 mir;
 	 mir = mir->NextSiblingElement("Mirror"))
 	{
@@ -818,12 +819,12 @@ extern "C" void __declspec(dllexport) SetPrevInstMan
 
 	int ret = 0;
 
-	prev_man = TiXmlDocumentRef();
+	prev_man = 0;
 	StringType mfile = NSIS::popstring();
 	if (mfile.length() > 0)
 	{
-		TiXmlDocumentRef newprev(new TiXmlDocument(mfile.c_str()));
-		if (newprev->LoadFile())
+		XMLDocumentRef newprev(new XMLDocument());
+		if (newprev->LoadFile(mfile.c_str()))
 		{
 			prev_man = newprev;
 			ret = 1;
@@ -936,18 +937,17 @@ extern "C" void __declspec(dllexport) RemoveAndAdd
 	 ++it)
 	{
 		num_files_in_cur_op = 0;
-		for (TiXmlElement* entry =
+		for (XMLElement* entry =
 		 (*it)->FirstChildElement("Entry");
 		 entry;
 		 entry = entry->NextSiblingElement("Entry"))
 			++num_files_in_cur_op;
 		cur_file_in_op_index = 0;
-		for (TiXmlElement* entry =
-		 TiXmlHandle((*it)->LastChild("Entry")).ToElement();
+		for (XMLElement* entry = (*it)->LastChildElement("Entry");
 		 entry;
-		 entry = TiXmlHandle(entry->PreviousSibling("Entry")).ToElement())
+		 entry = entry->PreviousSiblingElement("Entry"))
 		{
-			TiXmlText* etxt = TiXmlHandle(entry->FirstChild()).ToText();
+			XMLText* etxt = XMLHandle(entry->FirstChild()).ToText();
 			if (etxt)
 				RemoveEntry(inst_loc.c_str(), etxt->Value());
 			++cur_file_in_op_index;
@@ -969,7 +969,7 @@ extern "C" void __declspec(dllexport) RemoveAndAdd
 	 ++it)
 	{
 		const char* comp_id = 0;
-		TiXmlElement* parent1 = TiXmlHandle((*it)->Parent()).ToElement();
+		XMLElement* parent1 = XMLHandle((*it)->Parent()).ToElement();
 		if (parent1)
 			comp_id = parent1->Attribute("id");
 		if (comp_id && strlen(comp_id) > 0)
@@ -1644,8 +1644,8 @@ extern "C" void __declspec(dllexport) RemoveInst
 		NSIS::pushstring("Uninstall location hasn't been set");
 		return;
 	}
-	TiXmlDocument mdoc((uninstloc + "\\__installer\\installed_man.txt").c_str());
-	if (!mdoc.LoadFile())
+	XMLDocument mdoc;
+	if (!mdoc.LoadFile((uninstloc + "\\__installer\\installed_man.txt").c_str()))
 	{
 		StringType estr = std::string("Couldn't load '") + uninstloc
 		 + "\\__installer\\installed_man.txt'";
@@ -1667,18 +1667,18 @@ extern "C" void __declspec(dllexport) RemoveInst
 	 ++it)
 	{
 		num_files_in_cur_op = 0;
-		for (TiXmlElement* entry =
+		for (XMLElement* entry =
 		 (*it)->FirstChildElement("Entry");
 		 entry;
 		 entry = entry->NextSiblingElement("Entry"))
 			++num_files_in_cur_op;
 		cur_file_in_op_index = 0;
-		for (TiXmlElement* entry =
-		 TiXmlHandle((*it)->LastChild("Entry")).ToElement();
+		for (XMLElement* entry =
+		 (*it)->LastChildElement("Entry");
 		 entry;
-		 entry = TiXmlHandle(entry->PreviousSibling("Entry")).ToElement())
+		 entry = entry->PreviousSiblingElement("Entry"))
 		{
-			TiXmlText* etxt = TiXmlHandle(entry->FirstChild()).ToText();
+			XMLText* etxt = XMLHandle(entry->FirstChild()).ToText();
 			if (etxt)
 				RemoveEntry(uninstloc.c_str(), etxt->Value());
 			++cur_file_in_op_index;
@@ -1926,11 +1926,11 @@ extern "C" void __declspec(dllexport) GetSystemID
 	StringType path = NSIS::popstring();
 
 	const char* id = 0;
-	TiXmlDocument doc((path + "\\__installer\\installed_man.txt").c_str());
-	if (doc.LoadFile())
+	XMLDocument doc;
+	if (doc.LoadFile((path + "\\__installer\\installed_man.txt").c_str()))
 	{
-		TiXmlElement* sys_el
-		 = TiXmlHandle(doc.RootElement()).FirstChildElement("System").ToElement();
+		XMLElement* sys_el
+		 = XMLHandle(doc.RootElement()).FirstChildElement("System").ToElement();
 		if (sys_el)
 			id = sys_el->Attribute("id");
 	}

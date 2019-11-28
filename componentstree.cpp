@@ -20,10 +20,13 @@ this file freely.
 #include "config.h"
 
 
-typedef RefType< TiXmlDocument >::Ref TiXmlDocumentRef;
+using namespace tinyxml2;
 
 
-static const char* NonEmptyAttribute(TiXmlElement* el, const char* attr)
+typedef RefType< XMLDocument >::Ref XMLDocumentRef;
+
+
+static const char* NonEmptyAttribute(XMLElement* el, const char* attr)
 {
 	const char* val = el->Attribute(attr);
 	return (val && val[0]) ? val : 0;
@@ -36,7 +39,7 @@ struct Item
 
 	ItemType type;
 	StringType text;
-	TiXmlElement* element;
+	XMLElement* element;
 	HTREEITEM handle;
 	bool prev_inst;
 	bool selected;
@@ -45,7 +48,7 @@ struct Item
 	int unsize;
 	CheckState check;
 
-	Item(ItemType t, TiXmlElement* el)
+	Item(ItemType t, XMLElement* el)
 	 : type(t),
 	 element(el),
 	 handle(0),
@@ -81,15 +84,14 @@ bool ComponentsTree::BuildTreeView
   int check_index,
   int radio_index,
   const StringType& system_id,
-  TiXmlElement* comp_man_root,
-  TiXmlElement* prev_man_root)
+  XMLElement* comp_man_root,
+  XMLElement* prev_man_root)
 {
 	htreeview = htv;
 	ncheck = check_index;
 	nradio = radio_index;
-	man_root = RefType< TiXmlElement >::Ref(
-	 new TiXmlElement("TDMInstallManifest")
-	 );
+	m_doc = RefType< XMLDocument >::Ref(new XMLDocument);
+	m_doc->LinkEndChild(m_doc->NewElement("TDMInstallManifest"));
 	index_items.clear();
 	id_items.clear();
 	dl_size = 0;
@@ -263,7 +265,7 @@ int ComponentsTree::GetArchivesToInstall(ElementList& list) const
 		Item* item = RefGetPtr(index_items[i]);
 		if (item->selected && !item->prev_inst && item->element)
 		{
-			for (TiXmlElement* ar_el =
+			for (XMLElement* ar_el =
 			  item->element->FirstChildElement("Archive");
 			 ar_el;
 			 ar_el = ar_el->NextSiblingElement("Archive"))
@@ -279,7 +281,7 @@ int ComponentsTree::GetArchivesToInstall(ElementList& list) const
 
 int ComponentsTree::GetComponentsToRemove
  (ElementList& list,
-  TiXmlDocument* full_uninst) const
+  XMLDocument* full_uninst) const
 {
 	int uninst_count = 0;
 	if (!full_uninst)
@@ -296,13 +298,13 @@ int ComponentsTree::GetComponentsToRemove
 	}
 	else
 	{
-		std::list< TiXmlElement* > search_els;
+		std::list< XMLElement* > search_els;
 		search_els.push_back(full_uninst->RootElement());
 		while (!search_els.empty())
 		{
-			TiXmlElement* el = search_els.front();
+			XMLElement* el = search_els.front();
 			search_els.pop_front();
-			TiXmlElement* child = el->FirstChildElement();
+			XMLElement* child = el->FirstChildElement();
 			if (strcmp(child->Value(), "Entry") == 0)
 			{
 				++uninst_count;
@@ -323,14 +325,14 @@ void ComponentsTree::WriteInstMan
  (const StringType& outpath,
   const InstallManifest& inst_man)
 {
-	TiXmlDocument out;
-	TiXmlElement* root = new TiXmlElement("TDMInstallManifest");
+	XMLDocument out;
+	XMLElement* root = out.NewElement("TDMInstallManifest");
 	out.LinkEndChild(root);
-	TiXmlElement* sys = man_root->FirstChildElement("System");
+	XMLElement* sys = m_doc->FirstChildElement("TDMInstallManifest")->FirstChildElement("System");
 	if (!sys)
 		return;
-	TiXmlElement* sys_out = new TiXmlElement("System");
-	const TiXmlAttribute* attribute;
+	XMLElement* sys_out = out.NewElement("System");
+	const XMLAttribute* attribute;
 	for (attribute = sys->FirstAttribute();
 	 attribute;
 	 attribute = attribute->Next())
@@ -339,9 +341,9 @@ void ComponentsTree::WriteInstMan
 		 attribute->Value());
 	}
 	root->LinkEndChild(sys_out);
-	typedef std::map< std::string, TiXmlElement* > IDElementMap;
+	typedef std::map< std::string, XMLElement* > IDElementMap;
 	IDElementMap linked_map;
-	std::stack< TiXmlElement* > hierarchy;
+	// std::stack< XMLElement* > hierarchy;
 	for (size_t i = 0; i < index_items.size(); ++i)
 	{
 		Item* item = RefGetPtr(index_items[i]);
@@ -350,11 +352,11 @@ void ComponentsTree::WriteInstMan
 			const char* item_id = NonEmptyAttribute(item->element, "id");
 			if (item_id)
 			{
-				const TiXmlElement* entry_comp = inst_man.GetComponent(item_id);
+				const XMLElement* entry_comp = inst_man.GetComponent(item_id);
 				if (entry_comp)
 				{
-					TiXmlElement* link_el = sys_out;
-					TiXmlElement* new_el = entry_comp->Clone()->ToElement();
+					XMLElement* link_el = sys_out;
+					XMLElement* new_el = entry_comp->ShallowClone(&out)->ToElement();
 					new_el->SetValue(item->element->Value());
 					for (attribute = item->element->FirstAttribute();
 					 attribute;
@@ -364,10 +366,10 @@ void ComponentsTree::WriteInstMan
 						 attribute->Value());
 					}
 					new_el->SetAttribute("prev", "true");
-					for (TiXmlElement* clone_el =
-					  TiXmlHandle(item->element->Parent()).ToElement();
+					for (XMLElement* clone_el =
+					  XMLHandle(item->element->Parent()).ToElement();
 					 clone_el && strcmp(clone_el->Value(), "System") != 0;
-					 clone_el = TiXmlHandle(clone_el->Parent()).ToElement())
+					 clone_el = XMLHandle(clone_el->Parent()).ToElement())
 					{
 						IDElementMap::iterator found = linked_map.end();
 						const char* el_id = NonEmptyAttribute(clone_el, "id");
@@ -380,7 +382,7 @@ void ComponentsTree::WriteInstMan
 						}
 						else
 						{
-							TiXmlElement* el = new TiXmlElement(clone_el->Value());
+							XMLElement* el = out.NewElement(clone_el->Value());
 							for (attribute = clone_el->FirstAttribute();
 							 attribute;
 							 attribute = attribute->Next())
@@ -401,10 +403,10 @@ void ComponentsTree::WriteInstMan
 		}
 	}
 	// MiscFiles node
-	const TiXmlElement* mfiles = inst_man.GetComponent("MiscFiles");
+	const XMLElement* mfiles = inst_man.GetComponent("MiscFiles");
 	if (mfiles)
 	{
-		TiXmlElement* new_el = mfiles->Clone()->ToElement();
+		XMLElement* new_el = mfiles->ShallowClone(&out)->ToElement();
 		sys_out->LinkEndChild(new_el);
 	}
 	
@@ -509,7 +511,7 @@ void ComponentsTree::DeselectAll()
 }
 
 
-const TiXmlElement* ComponentsTree::GetElement(int index) const
+const XMLElement* ComponentsTree::GetElement(int index) const
 {
 	return index_items[index]->element;
 }
@@ -541,11 +543,11 @@ unsigned ComponentsTree::GetUninstallSize() const
 
 struct InsParent
 {
-	TiXmlElement* ex;
-	TiXmlElement* copy;
+	XMLElement* ex;
+	XMLElement* copy;
 	HTREEITEM handle;
 
-	InsParent(TiXmlElement* e, TiXmlElement* c, HTREEITEM h)
+	InsParent(XMLElement* e, XMLElement* c, HTREEITEM h)
 	 : ex(e),
 	 copy(c),
 	 handle(h)
@@ -554,14 +556,14 @@ struct InsParent
 };
 
 bool ComponentsTree::ProcessManifest
- (TiXmlElement* mroot,
+ (XMLElement* mroot,
   const StringType& system_id,
   HTREEITEM hroot)
 {
 	if (!mroot)
 		return false;
 	std::list< InsParent > search_children;
-	TiXmlElement* sys = mroot->FirstChildElement("System");
+	XMLElement* sys = mroot->FirstChildElement("System");
 	while (sys)
 	{
 		const char* sys_id = NonEmptyAttribute(sys, "id");
@@ -571,17 +573,17 @@ bool ComponentsTree::ProcessManifest
 	}
 	if (!sys)
 		return false;
-	TiXmlElement* sys_copy = sys->Clone()->ToElement();
-	man_root->LinkEndChild(sys_copy);
+	XMLElement* sys_copy = sys->ShallowClone(RefGetPtr(m_doc))->ToElement();
+	m_doc->FirstChildElement("TDMInstallManifest")->InsertEndChild(sys_copy);
 	search_children.push_back(InsParent(sys, sys_copy, hroot));
 	while (!search_children.empty())
 	{
-		TiXmlElement* ex_parent = search_children.front().ex;
-		TiXmlElement* copy_parent = search_children.front().copy;
+		XMLElement* ex_parent = search_children.front().ex;
+		XMLElement* copy_parent = search_children.front().copy;
 		HTREEITEM hparent = search_children.front().handle;
 		search_children.pop_front();
 		HTREEITEM vh = 0;
-		for (TiXmlElement* el = ex_parent->FirstChildElement();
+		for (XMLElement* el = ex_parent->FirstChildElement();
 		 el;
 		 el = el->NextSiblingElement())
 		{
@@ -591,7 +593,7 @@ bool ComponentsTree::ProcessManifest
 			 || strcmp(el_type, "Version") == 0)
 			{
 				HTREEITEM hitem = 0;
-				TiXmlElement* linked_el = 0;
+				XMLElement* linked_el = 0;
 				const char* el_id = NonEmptyAttribute(el, "id");
 				if (el_id)
 				{
@@ -608,17 +610,17 @@ bool ComponentsTree::ProcessManifest
 							if (oitem->element)
 							{
 								oitem->element->SetAttribute("prev", "true");
-								TiXmlNode* node = oitem->element->FirstChild();
+								XMLNode* node = oitem->element->FirstChild();
 								while (node)
 								{
-									TiXmlNode* temp = node;
+									XMLNode* temp = node;
 									node = node->NextSibling();
-									oitem->element->RemoveChild(temp);
+									oitem->element->DeleteChild(temp);
 								}
 								node = el->FirstChild();
 								while (node)
 								{
-									oitem->element->LinkEndChild(node->Clone());
+									oitem->element->LinkEndChild(node->ShallowClone(RefGetPtr(m_doc)));
 									node = node->NextSibling();
 								}
 							}
@@ -631,8 +633,8 @@ bool ComponentsTree::ProcessManifest
 				}
 				if (!linked_el)
 				{
-					linked_el = new TiXmlElement(el->Value());
-					const TiXmlAttribute* attribute = 0;
+					linked_el = m_doc->NewElement(el->Value());
+					const XMLAttribute* attribute = 0;
 					for (attribute = el->FirstAttribute();
 					 attribute;
 					 attribute = attribute->Next())
@@ -640,7 +642,7 @@ bool ComponentsTree::ProcessManifest
 						linked_el->SetAttribute(attribute->Name(),
 						 attribute->Value());
 					}
-					for (const TiXmlElement* cel = el->FirstChildElement();
+					for (const XMLElement* cel = el->FirstChildElement();
 					 cel;
 					 cel = cel->NextSiblingElement())
 					{
@@ -648,10 +650,10 @@ bool ComponentsTree::ProcessManifest
 						 || strcmp(cel->Value(), "Archive") == 0
 						 || strcmp(cel->Value(), "Entry") == 0)
 						{
-							linked_el->LinkEndChild(cel->Clone());
+							linked_el->InsertEndChild(cel->ShallowClone(RefGetPtr(m_doc)));
 						}
 					}
-					copy_parent->LinkEndChild(linked_el);
+					copy_parent->InsertEndChild(linked_el);
 				}
 				Item* pitem = GetItemFromHandle(hparent);
 				if ((!pitem
@@ -716,8 +718,8 @@ bool ComponentsTree::ProcessManifest
 
 
 HTREEITEM ComponentsTree::AddItem
- (TiXmlElement* ex_el,
-  TiXmlElement* store_el,
+ (XMLElement* ex_el,
+  XMLElement* store_el,
   ItemType type,
   const StringType& id,
   const StringType& txt,
@@ -985,7 +987,7 @@ void ComponentsTree::UpdateVersionedComps(HTREEITEM hparent, HTREEITEM hver)
 	Item* vitem = GetItemFromHandle(hver);
 	if (vitem && vitem->element)
 	{
-		for (TiXmlElement* comp_el =
+		for (XMLElement* comp_el =
 		  vitem->element->FirstChildElement("Component");
 		 comp_el;
 		 comp_el = comp_el->NextSiblingElement("Component"))
@@ -1023,9 +1025,9 @@ void ComponentsTree::EnsureSelectable(Item* item)
 	if (!item || !item->element)
 		return;
 	std::stack< int > pstack;
-	for (TiXmlElement* p_el = TiXmlHandle(item->element->Parent()).ToElement();
+	for (XMLElement* p_el = XMLHandle(item->element->Parent()).ToElement();
 	 p_el;
-	 p_el = TiXmlHandle(p_el->Parent()).ToElement())
+	 p_el = XMLHandle(p_el->Parent()).ToElement())
 	{
 		if (strcmp(p_el->Value(), "Version") == 0)
 		{
@@ -1099,22 +1101,22 @@ UINT ComponentsTree::SetCheckState(Item* item, CheckState state)
 }
 
 
-void ComponentsTree::UpdateItemAttrs(Item* item, TiXmlElement* attr_el,
+void ComponentsTree::UpdateItemAttrs(Item* item, XMLElement* attr_el,
  bool prev_inst)
 {
 	if (item && attr_el)
 	{
-		TiXmlText* txt = TiXmlHandle(attr_el->FirstChildElement("Description")).FirstChild().ToText();
+		XMLText* txt = XMLHandle(attr_el->FirstChildElement("Description")).FirstChild().ToText();
 		if (txt && strlen(txt->Value()) > 0)
 			item->description = txt->Value();
 		int size;
-		if (attr_el->QueryIntAttribute("unsize", &size) == TIXML_SUCCESS)
+		if (attr_el->QueryIntAttribute("unsize", &size) == XML_SUCCESS)
 		{
 			if (prev_inst)
 				uninst_size += size;
 			item->unsize = size;
 		}
-		for (TiXmlElement* ar_el = attr_el->FirstChildElement("Archive");
+		for (XMLElement* ar_el = attr_el->FirstChildElement("Archive");
 		 ar_el;
 		 ar_el = ar_el->NextSiblingElement("Archive"))
 		{
@@ -1122,7 +1124,7 @@ void ComponentsTree::UpdateItemAttrs(Item* item, TiXmlElement* attr_el,
 			if (ar_path)
 			{
 				if (ar_el->QueryIntAttribute("arcsize", &size) ==
-				 TIXML_SUCCESS)
+				 XML_SUCCESS)
 				{
 					int at = strlen(ar_path) - 2;
 					for (; at >= 0 && ar_path[at] != '/';

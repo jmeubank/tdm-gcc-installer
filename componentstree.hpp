@@ -24,12 +24,12 @@ this file freely.
 #include <vector>
 #include <map>
 #include <set>
-#include "tinyxml.h"
+#include <tinyxml2.h>
 #include "ref.hpp"
 
 
 typedef std::string StringType;
-typedef std::list< TiXmlElement* > ElementList;
+typedef std::list< tinyxml2::XMLElement* > ElementList;
 
 
 enum ItemType
@@ -65,15 +65,15 @@ public:
 	  int check_index,
 	  int radio_index,
 	  const StringType& system_id,
-	  TiXmlElement* comp_man_root,
-	  TiXmlElement* prev_man_root);
+	  tinyxml2::XMLElement* comp_man_root,
+	  tinyxml2::XMLElement* prev_man_root);
 
 	bool OnStateToggle(HTREEITEM hitem);
 
 	int GetArchivesToInstall(ElementList& list) const;
 	int GetComponentsToRemove
 	 (ElementList& list,
-	  TiXmlDocument* full_uninst = 0) const;
+	  tinyxml2::XMLDocument* full_uninst = 0) const;
 
 	void WriteInstMan
 	 (const StringType& outpath,
@@ -87,7 +87,7 @@ public:
 	void SetPrevInstSelected();
 	void DeselectAll();
 
-	const TiXmlElement* GetElement(int index) const;
+	const tinyxml2::XMLElement* GetElement(int index) const;
 
 	StringType GetDescription(int index) const;
 
@@ -97,12 +97,12 @@ public:
 
 private:
 	bool ProcessManifest
-	 (TiXmlElement* mroot,
+	 (tinyxml2::XMLElement* mroot,
 	  const StringType& system_id,
 	  HTREEITEM hroot);
 	HTREEITEM AddItem
-	 (TiXmlElement* ex_el,
-	  TiXmlElement* store_el,
+	 (tinyxml2::XMLElement* ex_el,
+	  tinyxml2::XMLElement* store_el,
 	  ItemType type,
 	  const StringType& id,
 	  const StringType& txt,
@@ -115,13 +115,13 @@ private:
 	void EnsureSelectable(Item* item);
 	void ToggleSel(Item* item);
 	UINT SetCheckState(Item* item, CheckState state);
-	void UpdateItemAttrs(Item* item, TiXmlElement* attr_el, bool prev_inst);
+	void UpdateItemAttrs(Item* item, tinyxml2::XMLElement* attr_el, bool prev_inst);
 	void EnsurePrevText(Item* item);
 
 	HWND htreeview;
 	int nradio;
 	int ncheck;
-	RefType< TiXmlElement >::Ref man_root;
+	RefType< tinyxml2::XMLDocument >::Ref m_doc;
 	std::vector< RefType< Item >::Ref > index_items;
 	typedef std::map< StringType, int > IDIndexMap;
 	IDIndexMap id_items;
