@@ -11,4 +11,3 @@ arcout.nsh
 arcreg.nsh
 TDMInstall.depend
 TDMInstall.layout
-setup_version.h
