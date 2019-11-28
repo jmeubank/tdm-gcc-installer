@@ -23,7 +23,7 @@ this file freely.
 InstallManifest::InstallManifest(const StringType& loadfile)
  : cur_comp(entry_setmap.end())
 {
-	if (doc.LoadFile(loadfile.c_str()))
+	if (doc.LoadFile(loadfile.c_str()) == tinyxml2::XML_SUCCESS)
 	{
 		std::list< tinyxml2::XMLElement* > search_els;
 		search_els.push_back(doc.RootElement());

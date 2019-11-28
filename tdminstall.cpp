@@ -435,7 +435,7 @@ extern "C" void __declspec(dllexport) SetManifest
 	HWND parentwnd = (HWND)NSIS::popint();
 
 	working_man = XMLDocumentRef(new XMLDocument);
-	if (working_man->LoadFile(fname.c_str()))
+	if (working_man->LoadFile(fname.c_str()) == XML_SUCCESS)
 	{
 		XMLElement* minver =
 		 working_man->RootElement()->FirstChildElement("MinVersion");
@@ -824,7 +824,7 @@ extern "C" void __declspec(dllexport) SetPrevInstMan
 	if (mfile.length() > 0)
 	{
 		XMLDocumentRef newprev(new XMLDocument());
-		if (newprev->LoadFile(mfile.c_str()))
+		if (newprev->LoadFile(mfile.c_str()) == XML_SUCCESS)
 		{
 			prev_man = newprev;
 			ret = 1;
@@ -1645,7 +1645,7 @@ extern "C" void __declspec(dllexport) RemoveInst
 		return;
 	}
 	XMLDocument mdoc;
-	if (!mdoc.LoadFile((uninstloc + "\\__installer\\installed_man.txt").c_str()))
+	if (mdoc.LoadFile((uninstloc + "\\__installer\\installed_man.txt").c_str()) != XML_SUCCESS)
 	{
 		StringType estr = std::string("Couldn't load '") + uninstloc
 		 + "\\__installer\\installed_man.txt'";
@@ -1927,7 +1927,7 @@ extern "C" void __declspec(dllexport) GetSystemID
 
 	const char* id = 0;
 	XMLDocument doc;
-	if (doc.LoadFile((path + "\\__installer\\installed_man.txt").c_str()))
+	if (doc.LoadFile((path + "\\__installer\\installed_man.txt").c_str()) == XML_SUCCESS)
 	{
 		XMLElement* sys_el
 		 = XMLHandle(doc.RootElement()).FirstChildElement("System").ToElement();

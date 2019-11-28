@@ -24,5 +24,5 @@ the following restrictions:
 
 The authors of the plugin DLLs in this directory are as follows:
  * inetc.dll: Takhir Bedertdinov (copyright NSIS)
- * RealProgress.dll: "Afrow UK"
+ * RealProgress.dll, nsRichEdit.dll: "Afrow UK"
  * ShellLink.dll: Angelo Mandato

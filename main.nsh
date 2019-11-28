@@ -29,6 +29,10 @@
 
 ; Plugin settings
 !addplugindir "plugins"
+!addplugindir "${OUTPUT_DIR}"
+
+
+!addincludedir ${OUTPUT_DIR}
 
 
 !ifdef INNER_COMPONENTS
@@ -147,7 +151,7 @@ Section "Install Components" SEC_INSTALL_COMPONENTS
 
 	; Unpack any inner archives
 !ifdef INNER_COMPONENTS
-!system 'ctemplate "${INNER_COMPONENTS}" arcout.template.txt > arcout.nsh' = 0
+!system '${OUTPUT_DIR}/ctemplate.exe "${INNER_COMPONENTS}" arcout.template.txt > ${OUTPUT_DIR}/arcout.nsh' = 0
 !include arcout.nsh
 !endif
 
@@ -386,7 +390,7 @@ Function .onInit
 	${EndIf}
 	tdminstall::EndInstFindBanner /NOUNLOAD
 !ifdef INNER_COMPONENTS
-!system 'ctemplate "${INNER_COMPONENTS}" arcreg.template.txt > arcreg.nsh' = 0
+!system '${OUTPUT_DIR}/ctemplate.exe "${INNER_COMPONENTS}" arcreg.template.txt > ${OUTPUT_DIR}/arcreg.nsh' = 0
 !include arcreg.nsh
 !endif
 FunctionEnd
@@ -665,7 +669,7 @@ Function WizardAction_Leave
 				Abort
 			${ElseIf} "$0" != "OK"
 				MessageBox MB_OK|MB_ICONEXCLAMATION \
-				 "The downloaded manifest file could not be loaded."
+				 "The downloaded manifest file could not be loaded:$\r$\n$0"
 				Delete "$working_manifest"
 				Abort
 			${EndIf}

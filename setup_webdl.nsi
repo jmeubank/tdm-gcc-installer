@@ -8,7 +8,7 @@
 ; redistribute this file freely.
 
 
-OutFile "output\tdm-gcc-webdl.exe"
+OutFile "${OUTPUT_DIR}/tdm-gcc-webdl.exe"
 !packhdr "exehead.tmp" 'upx --best exehead.tmp'
 
 !include "main.nsh"

@@ -14,8 +14,11 @@ this file freely.
 
 #include <list>
 #include <string>
-#include "tinyxml.h"
+#include <tinyxml2.h>
 #include "ref.hpp"
+
+
+using namespace tinyxml2;
 
 
 static void CharArrayDeleter(char* a)
@@ -25,7 +28,7 @@ static void CharArrayDeleter(char* a)
 
 
 static void Replace
- (TiXmlElement* ar_el,
+ (XMLElement* ar_el,
   const std::string& var,
   FILE* out)
 {
@@ -45,8 +48,8 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
-	TiXmlDocument doc(argv[1]);
-	if (!doc.LoadFile())
+	XMLDocument doc;
+	if (doc.LoadFile(argv[1]) != XML_SUCCESS)
 	{
 		fprintf(stderr,
 		 "\nCouldn't load '%s' as a component manifest\n", argv[1]);
@@ -64,11 +67,11 @@ int main(int argc, char* argv[])
 	RefType< char >::Ref str(new char[1024 * 1024], CharArrayDeleter);
 	char* estr = RefGetPtr(str);
 
-	std::list< TiXmlElement* > search_els;
+	std::list< XMLElement* > search_els;
 	search_els.push_back(doc.RootElement());
 	while (!search_els.empty())
 	{
-		TiXmlElement* el = search_els.front();
+		XMLElement* el = search_els.front();
 		search_els.pop_front();
 		if (strcmp(el->Value(), "Archive") == 0)
 		{
@@ -102,7 +105,7 @@ int main(int argc, char* argv[])
 		}
 		else
 		{
-			for (TiXmlElement* child = el->FirstChildElement();
+			for (XMLElement* child = el->FirstChildElement();
 			 child;
 			 child = child->NextSiblingElement())
 				search_els.push_back(child);

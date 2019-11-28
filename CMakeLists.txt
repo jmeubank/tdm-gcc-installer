@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.9)
 
 file(READ "SETUP-VERSION.txt" SETUP_VER)
 string(STRIP "${SETUP_VER}" SETUP_VER)
+file(READ "GCC-VERSION.txt" GCC_VER)
+string(STRIP "${GCC_VER}" GCC_VER)
 
 project(tdm-gcc)
 
@@ -39,6 +41,7 @@ target_include_directories(
 )
 target_link_options(tdminstall PRIVATE -s)
 target_link_directories(tdminstall PRIVATE "${XZ_SOURCE_DIR}/bin_i686-sse2")
+set_target_properties(tdminstall PROPERTIES PREFIX "")
 target_link_libraries(
     tdminstall
     PRIVATE
@@ -47,4 +50,60 @@ target_link_libraries(
     "${CMAKE_BINARY_DIR}/extlibs/xz/$ENV{XZ_LIB}"
     gdi32
     comctl32
+)
+
+add_executable(
+    ctemplate
+    ctemplate.cpp
+    "${CMAKE_BINARY_DIR}/extlibs/$ENV{TINYXML2_DIRNAME}/tinyxml2.cpp"
+)
+target_include_directories(
+    ctemplate
+    PRIVATE
+    "${CMAKE_BINARY_DIR}/extlibs/$ENV{TINYXML2_DIRNAME}"
+)
+
+add_custom_command(
+    OUTPUT tdm-gcc-${GCC_VER}.exe
+    COMMAND makensis -V2 -DOUTPUT_DIR=${CMAKE_BINARY_DIR} -- ${CMAKE_CURRENT_SOURCE_DIR}/setup_full_tdm32.nsi
+    DEPENDS
+    ctemplate
+    GCC-VERSION.txt
+    inner-manifest-tdm32.txt
+    main.nsh
+    SETUP-VERSION.txt
+    setup_full_tdm32.nsi
+    tdminstall
+)
+
+add_custom_command(
+    OUTPUT tdm64-gcc-${GCC_VER}.exe
+    COMMAND makensis -V2 -DOUTPUT_DIR=${CMAKE_BINARY_DIR} -- ${CMAKE_CURRENT_SOURCE_DIR}/setup_full_tdm64.nsi
+    DEPENDS
+    ctemplate
+    GCC-VERSION.txt
+    inner-manifest-tdm64.txt
+    main.nsh
+    SETUP-VERSION.txt
+    setup_full_tdm64.nsi
+    tdminstall
+)
+
+add_custom_command(
+    OUTPUT tdm-gcc-webdl.exe
+    COMMAND makensis -V2 -DOUTPUT_DIR=${CMAKE_BINARY_DIR} -- ${CMAKE_CURRENT_SOURCE_DIR}/setup_webdl.nsi
+    DEPENDS
+    ctemplate
+    main.nsh
+    SETUP-VERSION.txt
+    setup_webdl.nsi
+    tdminstall
+)
+
+add_custom_target(
+    installers ALL
+    DEPENDS
+    tdm-gcc-${GCC_VER}.exe
+    tdm64-gcc-${GCC_VER}.exe
+    tdm-gcc-webdl.exe
 )
