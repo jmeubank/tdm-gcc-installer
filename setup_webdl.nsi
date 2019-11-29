@@ -9,6 +9,6 @@
 
 
 OutFile "${OUTPUT_DIR}/tdm-gcc-webdl.exe"
-!packhdr "exehead.tmp" 'upx --best exehead.tmp'
+!packhdr "exehead.tmp" '${UPX_EXE} --best exehead.tmp'
 
 !include "main.nsh"

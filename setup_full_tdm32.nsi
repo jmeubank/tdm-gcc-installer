@@ -13,6 +13,6 @@
 !define INNER_COMPONENTS "inner-manifest-tdm32.txt"
 !define INNER_COMPONENTS_SYS "tdm32"
 OutFile "${OUTPUT_DIR}/tdm-gcc-${TDM_GCC_VER}.exe"
-!packhdr "exehead.tmp" 'upx --best exehead.tmp'
+!packhdr "exehead.tmp" '${UPX_EXE} --best exehead.tmp'
 
 !include "main.nsh"

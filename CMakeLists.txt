@@ -65,7 +65,9 @@ target_include_directories(
 
 add_custom_command(
     OUTPUT tdm-gcc-${GCC_VER}.exe
-    COMMAND makensis -V2 -DOUTPUT_DIR=${CMAKE_BINARY_DIR} -- ${CMAKE_CURRENT_SOURCE_DIR}/setup_full_tdm32.nsi
+    COMMAND ${CMAKE_BINARY_DIR}/extlibs/$ENV{NSIS_DIRNAME}/makensis.exe -V2 -DOUTPUT_DIR=${CMAKE_BINARY_DIR}
+        -DUPX_EXE=${CMAKE_BINARY_DIR}/extlibs/$ENV{UPX_DIRNAME}/upx.exe --
+        ${CMAKE_CURRENT_SOURCE_DIR}/setup_full_tdm32.nsi
     DEPENDS
     ctemplate
     GCC-VERSION.txt
@@ -78,7 +80,9 @@ add_custom_command(
 
 add_custom_command(
     OUTPUT tdm64-gcc-${GCC_VER}.exe
-    COMMAND makensis -V2 -DOUTPUT_DIR=${CMAKE_BINARY_DIR} -- ${CMAKE_CURRENT_SOURCE_DIR}/setup_full_tdm64.nsi
+    COMMAND ${CMAKE_BINARY_DIR}/extlibs/$ENV{NSIS_DIRNAME}/makensis.exe -V2 -DOUTPUT_DIR=${CMAKE_BINARY_DIR}
+        -DUPX_EXE=${CMAKE_BINARY_DIR}/extlibs/$ENV{UPX_DIRNAME}/upx.exe --
+        ${CMAKE_CURRENT_SOURCE_DIR}/setup_full_tdm64.nsi
     DEPENDS
     ctemplate
     GCC-VERSION.txt
@@ -91,7 +95,9 @@ add_custom_command(
 
 add_custom_command(
     OUTPUT tdm-gcc-webdl.exe
-    COMMAND makensis -V2 -DOUTPUT_DIR=${CMAKE_BINARY_DIR} -- ${CMAKE_CURRENT_SOURCE_DIR}/setup_webdl.nsi
+    COMMAND ${CMAKE_BINARY_DIR}/extlibs/$ENV{NSIS_DIRNAME}/makensis.exe -V2 -DOUTPUT_DIR=${CMAKE_BINARY_DIR}
+        -DUPX_EXE=${CMAKE_BINARY_DIR}/extlibs/$ENV{UPX_DIRNAME}/upx.exe --
+        ${CMAKE_CURRENT_SOURCE_DIR}/setup_webdl.nsi
     DEPENDS
     ctemplate
     main.nsh
