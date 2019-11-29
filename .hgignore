@@ -1,13 +1,4 @@
 syntax: glob
-.objs/
 build/
-**.o
-**.cbTemp
-**.exe
-tdminstall.dll
 archives
 releases
-arcout.nsh
-arcreg.nsh
-TDMInstall.depend
-TDMInstall.layout

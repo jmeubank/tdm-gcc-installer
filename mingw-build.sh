@@ -1,7 +1,7 @@
 #!/bin/sh
 
-export PATH=/c/Program\ Files/CMake/bin:/c/TDM-GCC-32/bin:$PATH
-
+export CMAKE_PATH=/c/Program\ Files/CMake/bin
+export GCC_PATH=/c/TDM-GCC-32/bin
 export TINYXML2_URL="file://C:/Users/joeub/Downloads/tinyxml2-7.1.0.tar.gz"
 export TINYXML2_DIRNAME="tinyxml2-7.1.0"
 export XARC_INCLUDE=/c/Users/joeub/xarc/include
@@ -15,6 +15,8 @@ export NSIS_DIRNAME="nsis-3.04"
 export UPX_URL="file://C:/Users/joeub/Downloads/upx-3.95-win32.zip"
 export UPX_FILENAME="upx-3.95-win32.zip"
 export UPX_DIRNAME="upx-3.95-win32"
+
+export PATH=$CMAKE_PATH:$GCC_PATH:$PATH
 
 mkdir -p extlibs && \
     ( \
