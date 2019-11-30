@@ -7,8 +7,8 @@ string(STRIP "${GCC_VER}" GCC_VER)
 
 project(tdm-gcc)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Os")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Os -std=gnu++11 -fno-rtti")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11 -fno-rtti -m32")
 set(CMAKE_RC_FLAGS "${CMAKE_RC_FLAGS} -F pe-i386")
 
 add_library(
@@ -26,6 +26,7 @@ target_include_directories(
     "${CMAKE_CURRENT_BINARY_DIR}"
     "$ENV{XARC_INCLUDE}"
 )
+target_compile_options(tdminstall_support PRIVATE -Os -flto)
 
 configure_file(setup_version.h.in setup_version.h @ONLY)
 add_library(
@@ -39,15 +40,14 @@ target_include_directories(
     "${CMAKE_BINARY_DIR}/extlibs/$ENV{TINYXML2_DIRNAME}"
     "${CMAKE_CURRENT_BINARY_DIR}"
 )
-target_link_options(tdminstall PRIVATE -s)
-target_link_directories(tdminstall PRIVATE "${XZ_SOURCE_DIR}/bin_i686-sse2")
+target_compile_options(tdminstall PRIVATE -Os -flto)
+target_link_options(tdminstall PRIVATE -s -Os -flto)
 set_target_properties(tdminstall PROPERTIES PREFIX "")
 target_link_libraries(
     tdminstall
     PRIVATE
     tdminstall_support
     "$ENV{XARC_LIB}"
-    "${CMAKE_BINARY_DIR}/extlibs/xz/$ENV{XZ_LIB}"
     gdi32
     comctl32
 )
