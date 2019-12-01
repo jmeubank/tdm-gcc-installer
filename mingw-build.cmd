@@ -3,8 +3,8 @@ setlocal
 
 set "WD=%__CD__%"
 
-REM the PATH environment needs to include 7z.exe, mingw32-make.exe and a working MinGW or MinGW-w64 GCC
-REM installation.
+REM The PATH environment needs to include 7z.exe, mingw32-make.exe, and a
+REM working MinGW or MinGW-w64 GCC installation.
 set "PATH=C:\Program Files\7-Zip;C:\TDM-GCC-32\bin;%PATH%"
 
 set "CMAKE_URL=file://C:/Users/joeub/Downloads/cmake-3.16.0-win32-x86.zip"
