@@ -16,6 +16,7 @@ or MinGW-w64 GCC installation. It does this separately from MSYS, mingw-get,
 or MSYS2's pacman, and is not designed to include those components.
 
 TDMInstall features:
+
 * Component descriptors and installation manifests use XML
 * Discriminatory uninstallation: only remove files installed by the setup
     program
@@ -39,6 +40,7 @@ The mingw-build.cmd script is capable of downloading and unpacking most of the
 required external libraries and binaries needed to create a TDM-GCC installer.
 All that is needed to initiate the build process on a relatively modern Windows
 system are:
+
 * A working MinGW or MingW-w64 GCC installation (GCC, GNU binutils, and the
     appropriate runtime and Windows API libraries), such as a prior TDM-GCC
     installation
@@ -54,11 +56,13 @@ hundred kilobytes in size.
 If you want to use versions of the other TDMInstall dependencies that are
 already installed, the mingw-build.cmd script doesn't easily allow for it yet,
 but it will in the near future. The dependencies it installs are:
+
 * [CMake](https://cmake.org/)
 * [TinyXML-2](https://github.com/leethomason/tinyxml2)
 * [NSIS](https://nsis.sourceforge.io/)
 * [UPX](https://github.com/upx/upx)
 * [XARC](https://github.com/jmeubank/xarc)
+
 The mingw-build.cmd script will attempt to download and unpack them into an
 "extlibs" subdirectory of the directory that you build in.
 
