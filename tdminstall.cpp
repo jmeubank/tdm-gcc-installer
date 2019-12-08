@@ -46,7 +46,7 @@ using namespace tinyxml2;
 
 typedef char CharType;
 typedef std::string StringType;
-typedef RefType< XMLDocument >::Ref XMLDocumentRef;
+typedef RefType< tinyxml2::XMLDocument >::Ref XMLDocumentRef;
 
 
 static HINSTANCE ginstance;
@@ -434,7 +434,7 @@ extern "C" void __declspec(dllexport) SetManifest
 	StringType fname = NSIS::popstring();
 	HWND parentwnd = (HWND)NSIS::popint();
 
-	working_man = XMLDocumentRef(new XMLDocument);
+	working_man = XMLDocumentRef(new tinyxml2::XMLDocument);
 	if (working_man->LoadFile(fname.c_str()) == XML_SUCCESS)
 	{
 		XMLElement* minver =
@@ -823,7 +823,7 @@ extern "C" void __declspec(dllexport) SetPrevInstMan
 	StringType mfile = NSIS::popstring();
 	if (mfile.length() > 0)
 	{
-		XMLDocumentRef newprev(new XMLDocument());
+		XMLDocumentRef newprev(new tinyxml2::XMLDocument);
 		if (newprev->LoadFile(mfile.c_str()) == XML_SUCCESS)
 		{
 			prev_man = newprev;
@@ -1644,7 +1644,7 @@ extern "C" void __declspec(dllexport) RemoveInst
 		NSIS::pushstring("Uninstall location hasn't been set");
 		return;
 	}
-	XMLDocument mdoc;
+	tinyxml2::XMLDocument mdoc;
 	if (mdoc.LoadFile((uninstloc + "\\__installer\\installed_man.txt").c_str()) != XML_SUCCESS)
 	{
 		StringType estr = std::string("Couldn't load '") + uninstloc
@@ -1926,7 +1926,7 @@ extern "C" void __declspec(dllexport) GetSystemID
 	StringType path = NSIS::popstring();
 
 	const char* id = 0;
-	XMLDocument doc;
+	tinyxml2::XMLDocument doc;
 	if (doc.LoadFile((path + "\\__installer\\installed_man.txt").c_str()) == XML_SUCCESS)
 	{
 		XMLElement* sys_el

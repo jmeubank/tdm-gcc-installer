@@ -47,6 +47,7 @@ target_link_libraries(
     tdminstall
     PRIVATE
     tdminstall_support
+    "${CMAKE_BINARY_DIR}/extlibs/$ENV{LUA_DIRNAME}/src/liblua.a"
     "$ENV{XARC_LIB}"
     gdi32
     comctl32
