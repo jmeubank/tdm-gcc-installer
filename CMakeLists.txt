@@ -8,8 +8,10 @@ string(STRIP "${GCC_VER}" GCC_VER)
 project(tdm-gcc)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11 -fno-rtti -m32")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -std=gnu++11 -m32")
 set(CMAKE_RC_FLAGS "${CMAKE_RC_FLAGS} -F pe-i386")
+#set(CMAKE_AR "gcc-ar")
+#set(CMAKE_RANLIB "gcc-ranlib")
 
 add_library(
     tdminstall_support STATIC
@@ -38,6 +40,7 @@ target_include_directories(
     tdminstall
     PRIVATE
     "${CMAKE_BINARY_DIR}/extlibs/$ENV{TINYXML2_DIRNAME}"
+    "${CMAKE_BINARY_DIR}/extlibs/$ENV{LUA_DIRNAME}/src"
     "${CMAKE_CURRENT_BINARY_DIR}"
 )
 target_compile_options(tdminstall PRIVATE -Os -flto)
@@ -67,12 +70,15 @@ target_include_directories(
 add_custom_command(
     OUTPUT tdm-gcc-${GCC_VER}.exe
     COMMAND ${CMAKE_BINARY_DIR}/extlibs/$ENV{NSIS_DIRNAME}/makensis.exe -V2 -DOUTPUT_DIR=${CMAKE_BINARY_DIR}
-        -DUPX_EXE=${CMAKE_BINARY_DIR}/extlibs/$ENV{UPX_DIRNAME}/upx.exe --
+        -DUPX_EXE=${CMAKE_BINARY_DIR}/extlibs/$ENV{UPX_DIRNAME}/upx.exe
+        -DARCHIVES_DIR=$ENV{DISTRIB_BASE}\\tdm32-sjlj --
         ${CMAKE_CURRENT_SOURCE_DIR}/setup_full_tdm32.nsi
     DEPENDS
     ctemplate
     GCC-VERSION.txt
     inner-manifest-tdm32.txt
+    arcout.template.txt
+    arcreg.template.txt
     main.nsh
     SETUP-VERSION.txt
     setup_full_tdm32.nsi
@@ -82,12 +88,15 @@ add_custom_command(
 add_custom_command(
     OUTPUT tdm64-gcc-${GCC_VER}.exe
     COMMAND ${CMAKE_BINARY_DIR}/extlibs/$ENV{NSIS_DIRNAME}/makensis.exe -V2 -DOUTPUT_DIR=${CMAKE_BINARY_DIR}
-        -DUPX_EXE=${CMAKE_BINARY_DIR}/extlibs/$ENV{UPX_DIRNAME}/upx.exe --
+        -DUPX_EXE=${CMAKE_BINARY_DIR}/extlibs/$ENV{UPX_DIRNAME}/upx.exe
+        -DARCHIVES_DIR=$ENV{DISTRIB_BASE}\\tdm64-seh --
         ${CMAKE_CURRENT_SOURCE_DIR}/setup_full_tdm64.nsi
     DEPENDS
     ctemplate
     GCC-VERSION.txt
     inner-manifest-tdm64.txt
+    arcout.template.txt
+    arcreg.template.txt
     main.nsh
     SETUP-VERSION.txt
     setup_full_tdm64.nsi

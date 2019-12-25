@@ -23,8 +23,11 @@ extern "C" {
 #include <shlobj.h>
 #include <sys/stat.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <errno.h>
 #include <direct.h>
+#include <lualib.h>
+#include <lauxlib.h>
 #include "tdminst_res.h"
 
 } //extern "C"
@@ -81,6 +84,7 @@ static int num_archives_to_dl;
 
 int cur_file_in_op_index = 0;
 int num_files_in_cur_op = 0;
+static StringType found_features_lua;
 
 static ComponentsTree ctree;
 
@@ -834,6 +838,148 @@ extern "C" void __declspec(dllexport) SetPrevInstMan
 	NSIS::pushint(ret);
 }
 
+/* Checks if two paths are the same or one is a child of the other. Very basic;
+ * Very basic; treats backslash and forward slash as equivalent and ignores
+ * case, but doesn't account for doubled slashes or other presumed oddness.
+ */
+static bool paths_are_common(const char* p1, const char* p2)
+{
+	/* In general, loop until one of the chars is '\0' */
+	for (; *p1 != '\0' && *p2 != '\0'; ++p1, ++p2)
+	{
+		/* Consider backslash and forward slash as equivalent */
+		if ((*p1 == '/' || *p2 == '\\') && (*p2 == '/' || *p2 == '\\'))
+			continue;
+		/* Do a case-insensitive comparison */
+		if (tolower(*p1) != tolower(*p2))
+			return false;
+	}
+	/* Since one of the chars is '\0', make sure the other one is '\0'
+	 * or a path separator.
+	 */
+	if (*p1 && *p1 != '/' && *p1 != '\\')
+		return false;
+	if (*p2 && *p2 != '/' && *p2 != '\\')
+		return false;
+
+	return true;
+}
+
+/* MinGW.org now includes a script intended to be run at the time that the WSL (mingwrt package)
+ * is installed or upgraded, namely var/lib/wsl/features.lua. This script merges any existing
+ * include/features.h with an incoming template to make sure that features.h stays up-to-date
+ * with both user modifications and upstream modifications.
+ *
+ * If we spot var/lib/wsl/features.lua in any archive, we will run it accordingly.
+ */
+static StringType ProcessFeaturesLua(const StringType& base_path, const StringType& script_path,
+	StringType& processed_path)
+{
+	/* Set MINGW32_SYSROOT for features.lua to grab */
+	_putenv((StringType("MINGW32_SYSROOT=") + base_path).c_str());
+
+	/* Initialize Lua */
+	RefType< lua_State >::Ref L(luaL_newstate(), lua_close);
+
+	/* This private struct helps protect against Lua longjmps by passing data
+	 * inside lua_pcall with a lua_cfunction and a lua_lightuserdata.
+	 * See: http://lua-users.org/wiki/ErrorHandlingBetweenLuaAndCplusplus
+	 */
+	struct LuaFeaturesProtector
+	{
+		StringType const& base_path;
+		StringType const& script_path;
+		StringType& processed_path;
+
+		/* Inside this function, all dangerous Lua functions that might longjmp
+		 * will be stopped by a lua_pcall setjmp, and converted to an error on
+		 * the stack.
+		 */
+		static int run(lua_State* L)
+		{
+			/* Get our data off the stack */
+			LuaFeaturesProtector* p = static_cast< LuaFeaturesProtector* >(lua_touserdata(L, 1));
+
+			/* Load the Lua support libraries (we need at least 'io' plus
+			 * whatever is referenced in features.lua, currently 'io' and
+			 * 'string' and 'table'.)
+			 */
+			luaL_openlibs(L);
+
+			/* Load and run the features.lua script. As part of this initial
+			 * load, the script grabs the current features.h file from the
+			 * environment root specified by MINGW32_SYSROOT and stores it.
+			 * The module is returned on the stack...
+			 */
+			StringType full_path = p->base_path + "/" + p->script_path;
+			luaL_dofile(L, full_path.c_str());
+
+			/* ... and we get ready to call its update function. */
+			lua_getfield(L, -1, "update");
+
+			/* Preparing to open the output features.h file; get the io module,
+			 * get its 'open' func.
+			 */
+			lua_getglobal(L, "io");
+			lua_getfield(L, -1, "open");
+			lua_remove(L, -2);
+
+			/* Use the features.lua module's built-in pathname function to
+			 * tell us what we should process.
+			 */
+			lua_getfield(L, -3, "pathname");
+			lua_pushnil(L);
+			lua_call(L, 1, 1);
+
+			/* Whatever got returned by the module's pathname func, truncate
+			 * it back to a local path for readout on the installed files
+			 * display.
+			 */
+			const char* pname = lua_tostring(L, -1);
+			if (paths_are_common(p->base_path.c_str(), pname))
+			{
+				pname += p->base_path.length();
+				for (; *pname == '/' || *pname == '\\'; ++pname)
+					;
+			}
+			p->processed_path = pname;
+
+			/* Now we have the path we want, add the open parameter ('w' for
+			 * writing) and finish calling the io.open function. This leaves
+			 * the open file handle on the stack.
+			 */
+			lua_pushliteral(L, "w");
+			lua_call(L, 2, 1);
+
+			/* Now on the stack: the features.lua 'update' function, and
+			 * the opened features.h file handle. Run the module's update
+			 * function with the opened file as its argument. The update
+			 * function has no return parameter.
+			 */
+			lua_call(L, 1, 0);
+
+			/* All that should be left on the stack is the features.lua
+			 * returned module.
+			 */
+			lua_pop(L, 1);
+
+			return 0;
+		}
+	} lfp = {base_path, script_path, processed_path};
+
+	/* Go inside lua_pcall to do our work */
+	lua_pushcfunction(RefGetPtr(L), LuaFeaturesProtector::run);
+	lua_pushlightuserdata(RefGetPtr(L), &lfp);
+	if (lua_pcall(RefGetPtr(L), 1, 0, 0) != 0)
+	{
+		const char* lua_err_str = lua_tostring(RefGetPtr(L), -1);
+		if (!lua_err_str)
+			lua_err_str = "Unrecognized Lua error";
+		return StringType(lua_err_str) + " (In '" + script_path + "')";
+	}
+	return "OK";
+}
+
 
 StringType InstallArchive
  (const char* base,
@@ -844,6 +990,11 @@ static nsFunction ra_cb_func = 0;
 
 static int RAOnCallback(const char* file, bool is_dir, bool is_del, bool is_arc)
 {
+	size_t slen = strlen(file);
+	if (slen >= 24 &&
+	 (stricmp(file + slen - 24, "var/lib/wsl/features.lua") == 0
+	 || stricmp(file + slen - 24, "var\\lib\\wsl\\features.lua") == 0))
+		found_features_lua = file;
 	if (ra_cb_func > 0)
 	{
 		NSIS::pushint(is_arc ? 1 : 0);
@@ -962,54 +1113,76 @@ extern "C" void __declspec(dllexport) RemoveAndAdd
 	inst_man->AddEntry("__installer/");
 	inst_man->AddEntry("__installer/installed_man.txt");
 
-	StringType result = "OK";
+	StringType final_result = "OK";
 
 	for (ElementList::const_iterator it = alist.begin();
 	 it != alist.end();
 	 ++it)
 	{
+		/* Figure out which component ID is being installed/updated */
 		const char* comp_id = 0;
 		XMLElement* parent1 = XMLHandle((*it)->Parent()).ToElement();
 		if (parent1)
 			comp_id = parent1->Attribute("id");
-		if (comp_id && strlen(comp_id) > 0)
+		if (!comp_id || strlen(comp_id) <= 0)
 		{
-			inst_man->SetComponent(comp_id);
-			const char* ar_path = (*it)->Attribute("path");
-			if (ar_path && strlen(ar_path) > 0)
+			++cur_op_index;
+			continue;
+		}
+		inst_man->SetComponent(comp_id);
+		/* Get the path of the archive */
+		const char* ar_path = (*it)->Attribute("path");
+		if (!ar_path || strlen(ar_path) <= 0)
+		{
+			++cur_op_index;
+			continue;
+		}
+		/* Get the position of the trailing slash in the archive path */
+		int at = strlen(ar_path) - 2;
+		for (; at >= 0 && ar_path[at] != '/'; --at)
+			;
+		/* Check all local paths where archives could be stored to find it */
+		std::list< StringType >::const_iterator it2 = local_paths.begin();
+		for (; it2 != local_paths.end(); ++it2)
+		{
+			if (FileExists((*it2 + "\\" + (ar_path + at + 1)).c_str()))
+				break;
+		}
+		if (it2 == local_paths.end())
+		{
+			final_result = StringType("Couldn't find local archive '") + ar_path + "'";
+			++cur_op_index;
+			continue;
+		}
+		/* Unpack the archive */
+		found_features_lua.clear();
+		RAOnCallback(ar_path + at + 1, false, false, true);
+		StringType result = InstallArchive(
+			inst_loc.c_str(),
+			(*it2 + "\\" + (ar_path + at + 1)).c_str(),
+			*RefGetPtr(inst_man),
+			RAOnCallback
+		);
+		if (result != "OK")
+		{
+			final_result = result;
+			++cur_op_index;
+			continue;
+		}
+		if (!found_features_lua.empty())
+		{
+			StringType processed_file;
+			result = ProcessFeaturesLua(inst_loc, found_features_lua, processed_file);
+			if (result == "OK")
 			{
-				int at = strlen(ar_path) - 2;
-				for (; at >= 0 && ar_path[at] != '/';
-				 --at);
-				std::list< StringType >::const_iterator it =
-				 local_paths.begin();
-				for (; it != local_paths.end(); ++it)
-				{
-					if (FileExists((*it + "\\" + (ar_path + at + 1)).c_str()))
-						break;
-				}
-				if (it != local_paths.end())
-				{
-				    RAOnCallback(ar_path + at + 1, false, false, true);
-					result = InstallArchive(inst_loc.c_str(),
-					 (*it + "\\" + (ar_path + at + 1)).c_str(),
-					 *RefGetPtr(inst_man),
-					 RAOnCallback);
-					if (result != "OK")
-						break;
-				}
-				else
-				{
-					result = StringType("Couldn't find local archive '")
-					 + ar_path + "'";
-					break;
-				}
+				RAOnCallback(processed_file.c_str(), false, false, false);
+				inst_man->AddEntry(processed_file.c_str());
 			}
 		}
 		++cur_op_index;
 	}
 
-	NSIS::pushstring(result.c_str());
+	NSIS::pushstring(final_result.c_str());
 }
 
 

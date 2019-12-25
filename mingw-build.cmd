@@ -6,6 +6,7 @@ set "WD=%__CD__%"
 REM The PATH environment needs to include 7z.exe, mingw32-make.exe, and a
 REM working MinGW or MinGW-w64 GCC installation.
 set "PATH=C:\Program Files\7-Zip;C:\TDM-GCC-32-4.7.1\bin;%PATH%"
+set "DISTRIB_BASE=C:\crossdev\gccmaster\distrib"
 
 set "CMAKE_URL=file://C:/Users/John/Downloads/cmake-3.16.0-win32-x86.zip"
 set "CMAKE_FILENAME=cmake-3.16.0-win32-x86.zip"
@@ -101,7 +102,7 @@ if not exist "%WD%extlibs/%LUA_DIRNAME%/" (
 if not exist "%WD%extlibs/%LUA_DIRNAME%/src/liblua.a" (
     echo Building LUA
     pushd "%WD%extlibs/%LUA_DIRNAME%/"
-    mingw32-make.exe mingw CFLAGS="-Os -flto" || exit /b %ERRORLEVEL%
+    mingw32-make.exe mingw CC="gcc -m32 -std=gnu99 -flto -fuse-linker-plugin" CFLAGS="-m32 -Os -flto" LDFLAGS="-m32 -Os -fuse-linker-plugin" || exit /b %ERRORLEVEL%
     popd
 )
 

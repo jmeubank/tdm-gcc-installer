@@ -356,7 +356,7 @@ void ComponentsTree::WriteInstMan
 				if (entry_comp)
 				{
 					XMLElement* link_el = sys_out;
-					XMLElement* new_el = entry_comp->ShallowClone(&out)->ToElement();
+					XMLElement* new_el = entry_comp->DeepClone(&out)->ToElement();
 					new_el->SetValue(item->element->Value());
 					for (attribute = item->element->FirstAttribute();
 					 attribute;
@@ -406,7 +406,7 @@ void ComponentsTree::WriteInstMan
 	const XMLElement* mfiles = inst_man.GetComponent("MiscFiles");
 	if (mfiles)
 	{
-		XMLElement* new_el = mfiles->ShallowClone(&out)->ToElement();
+		XMLElement* new_el = mfiles->DeepClone(&out)->ToElement();
 		sys_out->LinkEndChild(new_el);
 	}
 	

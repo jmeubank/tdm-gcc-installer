@@ -29,7 +29,7 @@ this file freely.
 
 // Set when InstallArchive is called; called from ArcBeforeCallback to indicate
 // that an entry is about to be unpacked
-int (*ia_callback)(const char*, bool, bool, bool) = 0;
+static int (*ia_callback)(const char*, bool, bool, bool) = 0;
 
 // Set when InstallArchive is called; entries are added to it in
 // ArcCreateCallback
@@ -106,7 +106,7 @@ std::string InstallArchive
 				 false, false) != 0)
 					return fmt("Failed to unpack '%s': cancelled");
 			}
-			if (xa.ExtractItem(base, 0x0, InstallArchiveXarcCallback)
+			if (xa.ExtractItem(base, XARC_XFLAG_CALLBACK_DIRS, InstallArchiveXarcCallback)
 			 != XARC_OK)
 				return XarcCombinedErrorString(xa);
 		} while (xa.NextItem() == XARC_OK);
