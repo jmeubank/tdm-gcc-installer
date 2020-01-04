@@ -128,7 +128,7 @@ void NSIS::pushstring(const char* str)
 
 void NSIS::pushint(int value)
 {
-	char buffer[1024];
+	char buffer[32];
 	wsprintf(buffer, "%d", value);
 	pushstring(buffer);
 }

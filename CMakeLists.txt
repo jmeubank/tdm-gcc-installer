@@ -60,11 +60,45 @@ add_executable(
     ctemplate
     ctemplate.cpp
     "${CMAKE_BINARY_DIR}/extlibs/$ENV{TINYXML2_DIRNAME}/tinyxml2.cpp"
+    "${CMAKE_BINARY_DIR}/extlibs/$ENV{MINILIBS_DIRNAME}/regexp.c"
 )
 target_include_directories(
     ctemplate
     PRIVATE
     "${CMAKE_BINARY_DIR}/extlibs/$ENV{TINYXML2_DIRNAME}"
+    "${CMAKE_BINARY_DIR}/extlibs/$ENV{MINILIBS_DIRNAME}"
+)
+
+add_executable(
+    prune_manifest
+    prune_manifest.cc
+    "${CMAKE_BINARY_DIR}/extlibs/$ENV{TINYXML2_DIRNAME}/tinyxml2.cpp"
+)
+target_include_directories(
+    prune_manifest
+    PRIVATE
+    "${CMAKE_BINARY_DIR}/extlibs/$ENV{TINYXML2_DIRNAME}"
+)
+
+add_custom_command(
+    OUTPUT inner-manifest-tdm32.txt
+    COMMAND echo $ENV{DISTRIB_BASE}/$ENV{NET_MANIFEST_FILE}>${CMAKE_BINARY_DIR}/inner-manifest-tdm32.template.txt
+    COMMAND echo tdm32>>${CMAKE_BINARY_DIR}/inner-manifest-tdm32.template.txt
+    COMMAND echo tdmrec>>${CMAKE_BINARY_DIR}/inner-manifest-tdm32.template.txt
+    COMMAND prune_manifest.exe >${CMAKE_CURRENT_SOURCE_DIR}/inner-manifest-tdm32.txt <${CMAKE_BINARY_DIR}/inner-manifest-tdm32.template.txt
+    DEPENDS
+    prune_manifest
+    $ENV{DISTRIB_BASE}/$ENV{NET_MANIFEST_FILE}
+)
+add_custom_command(
+    OUTPUT inner-manifest-tdm64.txt
+    COMMAND echo $ENV{DISTRIB_BASE}/$ENV{NET_MANIFEST_FILE}>${CMAKE_BINARY_DIR}/inner-manifest-tdm64.template.txt
+    COMMAND echo tdm64>>${CMAKE_BINARY_DIR}/inner-manifest-tdm64.template.txt
+    COMMAND echo tdmrec>>${CMAKE_BINARY_DIR}/inner-manifest-tdm64.template.txt
+    COMMAND prune_manifest.exe >${CMAKE_CURRENT_SOURCE_DIR}/inner-manifest-tdm64.txt <${CMAKE_BINARY_DIR}/inner-manifest-tdm64.template.txt
+    DEPENDS
+    prune_manifest
+    $ENV{DISTRIB_BASE}/$ENV{NET_MANIFEST_FILE}
 )
 
 add_custom_command(
@@ -77,8 +111,6 @@ add_custom_command(
     ctemplate
     GCC-VERSION.txt
     inner-manifest-tdm32.txt
-    arcout.template.txt
-    arcreg.template.txt
     main.nsh
     SETUP-VERSION.txt
     setup_full_tdm32.nsi
@@ -95,8 +127,6 @@ add_custom_command(
     ctemplate
     GCC-VERSION.txt
     inner-manifest-tdm64.txt
-    arcout.template.txt
-    arcreg.template.txt
     main.nsh
     SETUP-VERSION.txt
     setup_full_tdm64.nsi

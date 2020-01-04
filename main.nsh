@@ -13,7 +13,6 @@
 !define SHORTNAME "TDM-GCC"
 !define DEF_INST_DIR_32 "\TDM-GCC-32"
 !define DEF_INST_DIR_64 "\TDM-GCC-64"
-!define INNER_MANIFEST "inner-manifest.txt"
 !define LOCAL_NET_MANIFEST "net-manifest.txt"
 !define NET_MANIFEST_URL "http://tdragon.net/tdminst/net-manifest.txt"
 !define APPDATA_SUBFOLDER "TDM-GCC"
@@ -151,8 +150,13 @@ Section "Install Components" SEC_INSTALL_COMPONENTS
 
 	; Unpack any inner archives
 !ifdef INNER_COMPONENTS
-!system '${OUTPUT_DIR}/ctemplate.exe "${INNER_COMPONENTS}" arcout.template.txt > ${OUTPUT_DIR}/arcout.nsh' = 0
-!include arcout.nsh
+!system 'echo inner-manifest-${INNER_COMPONENTS_SYS}.txt>"${OUTPUT_DIR}/arcout.${INNER_COMPONENTS_SYS}.template.txt"'
+!system 'echo System:id:${INNER_COMPONENTS_SYS}>>"${OUTPUT_DIR}/arcout.${INNER_COMPONENTS_SYS}.template.txt"'
+!system 'echo Archive:path:.*/([^^?]+)>>"${OUTPUT_DIR}/arcout.${INNER_COMPONENTS_SYS}.template.txt"'
+!system 'echo ^]^]^>^]^]^>>>"${OUTPUT_DIR}/arcout.${INNER_COMPONENTS_SYS}.template.txt"'
+!system 'echo File "/oname=$PLUGINSDIR\@()@" "${ARCHIVES_DIR}\@()@">>"${OUTPUT_DIR}/arcout.${INNER_COMPONENTS_SYS}.template.txt"'
+!system '${OUTPUT_DIR}/ctemplate.exe <"${OUTPUT_DIR}/arcout.${INNER_COMPONENTS_SYS}.template.txt" >${OUTPUT_DIR}/arcout.${INNER_COMPONENTS_SYS}.nsh' = 0
+!include arcout.${INNER_COMPONENTS_SYS}.nsh
 !endif
 
 	; Download archives
@@ -367,13 +371,14 @@ Function .onInit
 	StrCpy $comp_text "Completed successfully"
 	StrCpy $inst_ftext "Installation Complete"
 	StrCpy $inst_fsubtext "Setup was completed successfully."
-	StrCpy $working_manifest "$PLUGINSDIR\${INNER_MANIFEST}"
 	StrCpy $num_prev_insts 0
 	StrCpy $man_msg ""
 !ifdef INNER_COMPONENTS
+	StrCpy $working_manifest "$PLUGINSDIR\${INNER_COMPONENTS}"
 	StrCpy $system_id "${INNER_COMPONENTS_SYS}"
 !else
 	StrCpy $system_id "tdm32"
+	StrCpy $working_manifest ""
 !endif
 	tdminstall::BeginInstFindBanner /NOUNLOAD
 	tdminstall::UpdateFoundInsts /NOUNLOAD \
@@ -390,8 +395,13 @@ Function .onInit
 	${EndIf}
 	tdminstall::EndInstFindBanner /NOUNLOAD
 !ifdef INNER_COMPONENTS
-!system '${OUTPUT_DIR}/ctemplate.exe "${INNER_COMPONENTS}" arcreg.template.txt > ${OUTPUT_DIR}/arcreg.nsh' = 0
-!include arcreg.nsh
+!system 'echo inner-manifest-${INNER_COMPONENTS_SYS}.txt>"${OUTPUT_DIR}/arcreg.${INNER_COMPONENTS_SYS}.template.txt"'
+!system 'echo System:id:${INNER_COMPONENTS_SYS}>>"${OUTPUT_DIR}/arcreg.${INNER_COMPONENTS_SYS}.template.txt"'
+!system 'echo Archive:path:.*/([^^?]+)>>"${OUTPUT_DIR}/arcout.${INNER_COMPONENTS_SYS}.template.txt"'
+!system 'echo ^]^]^>^]^]^>>>"${OUTPUT_DIR}/arcreg.${INNER_COMPONENTS_SYS}.template.txt"'
+!system 'echo tdminstall::RegisterInnerArchive /NOUNLOAD "@()@">>"${OUTPUT_DIR}/arcreg.${INNER_COMPONENTS_SYS}.template.txt"'
+!system '${OUTPUT_DIR}/ctemplate.exe <"${OUTPUT_DIR}/arcreg.${INNER_COMPONENTS_SYS}.template.txt" >${OUTPUT_DIR}/arcreg.${INNER_COMPONENTS_SYS}.nsh' = 0
+!include arcreg.${INNER_COMPONENTS_SYS}.nsh
 !endif
 FunctionEnd
 
@@ -461,18 +471,23 @@ dlfile:
 	tdminstall::GetDownloadProgress /NOUNLOAD $ar_dl_index ; Pushes...
 	RealProgress::SetProgress /NOUNLOAD ; ...then pops.
 	${StrRep} $0 "$apc_path$apc_file" "+" "%252B"
-	Push "$dl_mirror$0"
+	StrCpy $1 "$apc_path" 4
+	${If} "$1" == "http"
+		StrCpy $1 "$0"
+	${Else}
+		StrCpy $1 "$dl_mirror$0"
+	${EndIf}
+	Push "$1"
 	Push "$apc_file"
 	Call DownloadArchive
 	Pop $0
 	${If} $0 != "OK"
 		MessageBox MB_RETRYCANCEL|MB_ICONEXCLAMATION|MB_DEFBUTTON1 \
 		 "Couldn't download \
-		 '$dl_mirror$apc_path$apc_file':$\r$\n$0$\r$\n$\r$\nWould you like to \
-		 try again?" \
+		 '$1':$\r$\n$0$\r$\n$\r$\nWould you like to try again?" \
 		 IDRETRY dlfile
 		DetailPrint "$0"
-		StrCpy $0 "Couldn't download '$dl_mirror$apc_path$apc_file'"
+		StrCpy $0 "Couldn't download '$1'"
 	${EndIf}
 	IntOp $ar_dl_index $ar_dl_index + 1
 	tdminstall::AddManMiscFile /NOUNLOAD "__installer/downloaded/$apc_file"

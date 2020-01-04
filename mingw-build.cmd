@@ -7,6 +7,7 @@ REM The PATH environment needs to include 7z.exe, mingw32-make.exe, and a
 REM working MinGW or MinGW-w64 GCC installation.
 set "PATH=C:\Program Files\7-Zip;C:\TDM-GCC-32-4.7.1\bin;%PATH%"
 set "DISTRIB_BASE=C:\crossdev\gccmaster\distrib"
+set "NET_MANIFEST_FILE=net-manifest.txt.new.txt"
 
 set "CMAKE_URL=file://C:/Users/John/Downloads/cmake-3.16.0-win32-x86.zip"
 set "CMAKE_FILENAME=cmake-3.16.0-win32-x86.zip"
@@ -25,6 +26,9 @@ set "XARC_LIB=C:/crossdev/xarc/build-cmd/libxarc.a"
 set "LUA_URL=file://C:/Users/John/Downloads/lua-5.3.5.tar.gz"
 set "LUA_FILENAME=lua-5.3.5.tar.gz"
 set "LUA_DIRNAME=lua-5.3.5"
+set "MINILIBS_URL=https://github.com/ccxvii/minilibs/archive/master.zip"
+set "MINILIBS_FILENAME=minilibs-master.zip"
+set "MINILIBS_DIRNAME=minilibs-master"
 
 set "PATH=%WD%extlibs\%CMAKE_DIRNAME%\bin;%PATH%"
 
@@ -103,6 +107,20 @@ if not exist "%WD%extlibs/%LUA_DIRNAME%/src/liblua.a" (
     echo Building LUA
     pushd "%WD%extlibs/%LUA_DIRNAME%/"
     mingw32-make.exe mingw CC="gcc -m32 -std=gnu99 -flto -fuse-linker-plugin" CFLAGS="-m32 -Os -flto" LDFLAGS="-m32 -Os -fuse-linker-plugin" || exit /b %ERRORLEVEL%
+    popd
+)
+
+REM Minilibs
+if not exist "%WD%extlibs/%MINILIBS_FILENAME%" (
+    echo Downloading Minilibs
+    pushd "%WD%extlibs/"
+    curl -#JLO "%MINILIBS_URL%" || exit /b %ERRORLEVEL%
+    popd
+)
+if not exist "%WD%extlibs/%MINILIBS_DIRNAME%/" (
+    echo Unpacking Minilibs
+    pushd "%WD%extlibs/"
+    7z.exe x -y "%MINILIBS_FILENAME%" || exit /b %ERRORLEVEL%
     popd
 )
 
