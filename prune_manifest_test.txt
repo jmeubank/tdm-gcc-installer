@@ -1,0 +1,3 @@
+C:\crossdev\gccmaster\distrib\net-manifest.txt
+tdm32
+tdmrec

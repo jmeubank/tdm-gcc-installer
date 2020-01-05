@@ -1,0 +1,7 @@
+C:\crossdev\gccmaster\distrib\net-manifest.txt.new.txt
+System:id:tdm32
+InstallType:id:tdmrec$
+Select:id:(.+)
+]]>]]>
+@()@
+]]>]]>

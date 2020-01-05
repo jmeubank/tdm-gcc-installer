@@ -3,3 +3,4 @@ syntax: glob
 build-cmd/
 archives
 releases
+inner-manifest-tdm*.txt

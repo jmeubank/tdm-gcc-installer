@@ -81,7 +81,7 @@ target_include_directories(
 )
 
 add_custom_command(
-    OUTPUT inner-manifest-tdm32.txt
+    OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/inner-manifest-tdm32.txt
     COMMAND echo $ENV{DISTRIB_BASE}/$ENV{NET_MANIFEST_FILE}>${CMAKE_BINARY_DIR}/inner-manifest-tdm32.template.txt
     COMMAND echo tdm32>>${CMAKE_BINARY_DIR}/inner-manifest-tdm32.template.txt
     COMMAND echo tdmrec>>${CMAKE_BINARY_DIR}/inner-manifest-tdm32.template.txt
@@ -91,7 +91,7 @@ add_custom_command(
     $ENV{DISTRIB_BASE}/$ENV{NET_MANIFEST_FILE}
 )
 add_custom_command(
-    OUTPUT inner-manifest-tdm64.txt
+    OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/inner-manifest-tdm64.txt
     COMMAND echo $ENV{DISTRIB_BASE}/$ENV{NET_MANIFEST_FILE}>${CMAKE_BINARY_DIR}/inner-manifest-tdm64.template.txt
     COMMAND echo tdm64>>${CMAKE_BINARY_DIR}/inner-manifest-tdm64.template.txt
     COMMAND echo tdmrec>>${CMAKE_BINARY_DIR}/inner-manifest-tdm64.template.txt

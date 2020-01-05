@@ -1,5 +1,10 @@
 # TDM-GCC
 
+<p align="center">
+<img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/jmeubank/tdm-gcc">
+<img alt="GitHub Release Date" src="https://img.shields.io/github/release-date/jmeubank/tdm-gcc">
+</p>
+
 TDM-GCC is a Windows-friendly version of the GCC compiler that lets you write
 programs with no DLL dependence. To download and use TDM-GCC, please visit
 [http://tdm-gcc.tdragon.net/].
@@ -26,7 +31,7 @@ TDMInstall features:
 - Let users select from multiple download mirrors (becoming obsolete)
 - Unpack the common archive types created by upstream distributors:
     zip, 7z, tar.gz, tar.bz2, tar.lzma, tar.xz (as supported by
-    [XARC](https://github.com/jmeubank/xarc)
+    [XARC](https://github.com/jmeubank/xarc))
 - Download component archives with resume capability (uses the Inetc plugin
     for NSIS)
 - Track multiple installations
@@ -47,18 +52,20 @@ system are:
     installers
 
 The tdminstall.dll plugin is currently built and tested under TDM-GCC version
-4.7.1 for MinGW. Later versions of GCC have added significant code bloat
-to the C++ standard library, but version 4.7.1 creates a DLL just a few
+4.7.1 for MinGW. Later versions of GCC have added significant code bloat when
+using the C++ standard library, but version 4.7.1 creates a DLL just a few
 hundred kilobytes in size.
 
 If you want to use versions of the other TDMInstall dependencies that are
-already installed, the mingw-build.cmd script doesn't easily allow for it yet,
-but it will in the near future. The dependencies it installs are:
+already installed, the mingw-build.cmd script doesn't easily allow for it just
+yet. The dependencies it installs are:
 - [CMake](https://cmake.org/)
 - [TinyXML-2](https://github.com/leethomason/tinyxml2)
 - [NSIS](https://nsis.sourceforge.io/)
 - [UPX](https://github.com/upx/upx)
 - [XARC](https://github.com/jmeubank/xarc)
+- [Lua](https://www.lua.org/)
+- [Minilibs](https://github.com/ccxvii/minilibs)
 
 The mingw-build.cmd script will attempt to download and unpack them into an
 "extlibs" subdirectory of the directory that you build in.
