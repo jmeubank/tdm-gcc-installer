@@ -14,7 +14,9 @@
 !define DEF_INST_DIR_32 "\TDM-GCC-32"
 !define DEF_INST_DIR_64 "\TDM-GCC-64"
 !define LOCAL_NET_MANIFEST "net-manifest.txt"
-!define NET_MANIFEST_URL "http://tdragon.net/tdminst/net-manifest.txt"
+;!define NET_MANIFEST_URL "http://tdragon.net/tdminst/net-manifest.txt"
+!define NET_MANIFEST_URL "C:\crossdev\gccmaster\distrib\net-manifest.txt.new.txt"
+!define DEFAULT_BASE_URL "http://downloads.sourceforge.net/project/"
 !define APPDATA_SUBFOLDER "TDM-GCC"
 !define STARTMENU_ENTRY_32 "TDM-GCC-32"
 !define STARTMENU_ENTRY_64 "TDM-GCC-64"
@@ -58,7 +60,7 @@ CompletedText "$comp_text"
 !insertmacro GetParameters
 !insertmacro un.GetParameters
 !include StrFunc.nsh
-${StrRep}
+;${StrRep}
 
 !define MULTIUSER_EXECUTIONLEVEL Highest
 !include MultiUser.nsh
@@ -69,7 +71,6 @@ Var setup_type
 Var stype_shortdesc
 Var inst_dir
 Var dlupdates
-Var dl_mirror
 Var comp_text
 Var inst_ftext
 Var inst_fsubtext
@@ -104,8 +105,6 @@ Page custom Tidbits_Create Tidbits_Leave
 !define MUI_PAGE_CUSTOMFUNCTION_SHOW InstDir_Show
 !define MUI_PAGE_CUSTOMFUNCTION_LEAVE InstDir_Leave
 !insertmacro MUI_PAGE_DIRECTORY
-
-Page custom MirrorSelect_Create MirrorSelect_Leave
 
 Page custom Components_Create
 
@@ -145,6 +144,11 @@ Section "Install Components" SEC_INSTALL_COMPONENTS
 	SetOutPath "$inst_dir"
 	CreateDirectory "$inst_dir\__installer"
 	tdminstall::AddManMiscFile /NOUNLOAD "__installer/"
+
+	; This executable
+	CopyFiles /SILENT "$EXEPATH" "$inst_dir\__installer"
+	tdminstall::AddManMiscFile /NOUNLOAD "__installer/$EXEFILE"
+
 	CreateDirectory "$inst_dir\__installer\downloaded"
 	tdminstall::AddManMiscFile /NOUNLOAD "__installer/downloaded/"
 
@@ -160,13 +164,15 @@ Section "Install Components" SEC_INSTALL_COMPONENTS
 !endif
 
 	; Download archives
-	StrCpy $ar_dl_index 0
-	GetFunctionAddress $0 "ArchiveCallbackForDownload"
-	tdminstall::EnumArchives /NOUNLOAD $0
-	Pop $0
-	${If} $0 != "OK"
-		DetailPrint "$0"
-		Goto onerror
+	${If} $dlupdates == "yes"
+		StrCpy $ar_dl_index 0
+		GetFunctionAddress $0 "ArchiveCallbackForDownload"
+		tdminstall::EnumArchives /NOUNLOAD $0
+		Pop $0
+		${If} $0 != "OK"
+			DetailPrint "$0"
+			Goto onerror
+		${EndIf}
 	${EndIf}
 
 	; Install archives
@@ -182,10 +188,6 @@ Section "Install Components" SEC_INSTALL_COMPONENTS
 	; MinGW environment vars batch file
 	File "mingwvars.bat"
 	tdminstall::AddManMiscFile /NOUNLOAD "mingwvars.bat"
-
-	; This executable
-	CopyFiles /SILENT "$EXEPATH" "$inst_dir\__installer"
-	tdminstall::AddManMiscFile /NOUNLOAD "__installer/$EXEFILE"
 
 	; Start menu shortcuts
 	tdminstall::GetComponentSelected /NOUNLOAD "startmenu"
@@ -217,6 +219,24 @@ Section "Install Components" SEC_INSTALL_COMPONENTS
 			Goto onerror
 		${EndIf}
 	${EndIf}
+
+	Goto instend
+
+onerror:
+	StrCpy $inst_ftext "Installation Failed"
+	StrCpy $inst_fsubtext "Setup was not completed successfully."
+	StrCpy $comp_text "One or more errors occurred"
+
+instend:
+	; Write installation manifest
+	DetailPrint "Writing installation manifest"
+	tdminstall::AddManMiscFile /NOUNLOAD "__installer/installed_man.txt"
+	tdminstall::WriteInstManifest /NOUNLOAD
+
+	; Add installation to list
+	DetailPrint "Updating list of ${SHORTNAME} installations"
+	tdminstall::WriteInstList /NOUNLOAD "$APPDATA\${APPDATA_SUBFOLDER}" \
+	 "installations.txt"
 
 	; Add/Remove Programs entry
 	WriteRegStr SHELL_CONTEXT \
@@ -250,23 +270,6 @@ Section "Install Components" SEC_INSTALL_COMPONENTS
 	 "Software\Microsoft\Windows\CurrentVersion\Uninstall\${UNINSTKEY}" \
 	 "DisplayVersion" "${SETUP_VER}"
 
-	; Write installation manifest
-	DetailPrint "Writing installation manifest"
-	tdminstall::WriteInstManifest /NOUNLOAD
-
-	; Add installation to list
-	DetailPrint "Updating list of ${SHORTNAME} installations"
-	tdminstall::WriteInstList /NOUNLOAD "$APPDATA\${APPDATA_SUBFOLDER}" \
-	 "installations.txt"
-
-	Goto instend
-
-onerror:
-	StrCpy $inst_ftext "Installation Failed"
-	StrCpy $inst_fsubtext "Setup was not completed successfully."
-	StrCpy $comp_text "One or more errors occurred"
-
-instend:
 	RealProgress::SetProgress /NOUNLOAD 100
 SectionEnd
 
@@ -367,7 +370,6 @@ Function .onInit
 	StrCpy $setup_type "undefined"
 	StrCpy $inst_dir ""
 	StrCpy $dlupdates "yes"
-	StrCpy $dl_mirror ""
 	StrCpy $comp_text "Completed successfully"
 	StrCpy $inst_ftext "Installation Complete"
 	StrCpy $inst_fsubtext "Setup was completed successfully."
@@ -445,9 +447,9 @@ FunctionEnd
 
 ;;; Utility functions
 Function ArchiveCallbackForDownload
-	Var /GLOBAL apc_path
+	Var /GLOBAL apc_url
 	Var /GLOBAL apc_file
-	Pop $apc_path
+	Pop $apc_url
 	Pop $apc_file
 	Push $0
 
@@ -467,16 +469,16 @@ Function ArchiveCallbackForDownload
 	${EndIf}
 
 dlfile:
-	DetailPrint "Downloading '$apc_file'"
+	;${StrRep} $0 "$apc_url" "+" "%252B"
+	StrCpy $1 "$apc_url" 4
+	${If} "$1" == "http"
+		StrCpy $1 "$apc_url"
+	${Else}
+		StrCpy $1 "${DEFAULT_BASE_URL}$apc_url"
+	${EndIf}
+	DetailPrint "Downloading '$1'"
 	tdminstall::GetDownloadProgress /NOUNLOAD $ar_dl_index ; Pushes...
 	RealProgress::SetProgress /NOUNLOAD ; ...then pops.
-	${StrRep} $0 "$apc_path$apc_file" "+" "%252B"
-	StrCpy $1 "$apc_path" 4
-	${If} "$1" == "http"
-		StrCpy $1 "$0"
-	${Else}
-		StrCpy $1 "$dl_mirror$0"
-	${EndIf}
 	Push "$1"
 	Push "$apc_file"
 	Call DownloadArchive
@@ -546,9 +548,10 @@ Function DownloadArchive
 	Var /GLOBAL da_url
 	Pop $da_file
 	Pop $da_url
-	inetc::get \
+	INetC::get \
 	 /CAPTION "Download '$da_file'" \
 	 /QUESTION "Are you sure you want to cancel the download?" \
+	 /USERAGENT "curl/7" \
 	 "$da_url" "$inst_dir\__installer\downloaded\$da_file" \
 	 /END
 	; Leave result on stack for caller to use
@@ -655,26 +658,31 @@ Function WizardAction_Leave
 	${If} "$setup_type" != "remove"
 		${If} $dlupdates == "yes"
 			${IfNot} ${FileExists} "$PLUGINSDIR\${LOCAL_NET_MANIFEST}"
-				Push /END
-				Push "$PLUGINSDIR\${LOCAL_NET_MANIFEST}"
-				Push "${NET_MANIFEST_URL}"
-				Push "Are you sure you want to cancel the download?"
-				Push /QUESTION
-				Push "Downloading '${NET_MANIFEST_URL}'"
-				Push /BANNER
-				Push \
-				 "An error occurred while downloading '${NET_MANIFEST_URL}'. Would \
-				 you like to try again?"
-				Push /RESUME
-				Push "Download updated manifest"
-				Push /CAPTION
-				inetc::get
-				Pop $0
-				${If} "$0" != "OK"
-					MessageBox MB_OK|MB_ICONEXCLAMATION \
-					 "An updated manifest file could not be \
-					 downloaded:$\r$\n$0$\r$\n(${NET_MANIFEST_URL})"
-					Abort
+				StrCpy $0 "${NET_MANIFEST_URL}" 4
+				${If} "$0" == "http"
+					Push /END
+					Push "$PLUGINSDIR\${LOCAL_NET_MANIFEST}"
+					Push "${NET_MANIFEST_URL}"
+					Push "Are you sure you want to cancel the download?"
+					Push /QUESTION
+					Push "Downloading '${NET_MANIFEST_URL}'"
+					Push /BANNER
+					Push \
+					"An error occurred while downloading '${NET_MANIFEST_URL}'. Would \
+					you like to try again?"
+					Push /RESUME
+					Push "Download updated manifest"
+					Push /CAPTION
+					INetC::get
+					Pop $0
+					${If} "$0" != "OK"
+						MessageBox MB_OK|MB_ICONEXCLAMATION \
+						"An updated manifest file could not be \
+						downloaded:$\r$\n$0$\r$\n(${NET_MANIFEST_URL})"
+						Abort
+					${EndIf}
+				${Else}
+					CopyFiles /SILENT "${NET_MANIFEST_URL}" "$PLUGINSDIR\${LOCAL_NET_MANIFEST}"
 				${EndIf}
 			${EndIf}
 			StrCpy $working_manifest "$PLUGINSDIR\${LOCAL_NET_MANIFEST}"
@@ -977,39 +985,6 @@ Function WriteUninstCallback
 FunctionEnd
 
 
-Function MirrorSelect_Create
-	${If} $dlupdates != "yes"
-		Abort
-	${EndIf}
-
-	!insertmacro MUI_HEADER_TEXT "$stype_shortdesc: Download Mirror" \
-	 "Choose the location of a download server."
-
-	nsDialogs::Create /NOUNLOAD 1018
-	Pop $0
-
-	${NSD_CreateLabel} 0 5u 100% 36u \
-	 "Please select a download mirror from the following list. For a quicker \
-	  download, choose a mirror that is geographically close to you."
-	Pop $0
-
-	${NSD_CreateGroupBox} 10u 40u 280u 90u "Select a Mirror"
-	Pop $0
-
-	Var /GLOBAL mirror_lb
-	${NSD_CreateListBox} 18u 51u 264u 72u ""
-	Pop $mirror_lb
-	tdminstall::PopulateMirrorList /NOUNLOAD $mirror_lb
-
-	nsDialogs::Show
-FunctionEnd
-
-Function MirrorSelect_Leave
-	tdminstall::GetSelMirror /NOUNLOAD $mirror_lb
-	Pop $dl_mirror
-FunctionEnd
-
-
 Function Components_Create
 	!insertmacro MUI_HEADER_TEXT "$stype_shortdesc: Choose Components" \
 	 "Choose which features of ${SHORTNAME} you want installed."
@@ -1067,11 +1042,11 @@ Function LaunchReadme
 	${If} "$system_id" == "tdm64"
 		Push "$inst_dir\${READMEFILE_64}"
 		Call ConvertUnixNewLines
-		ExecShell "open" "$inst_dir\${READMEFILE_64}"
+		Exec 'notepad.exe "$inst_dir\${READMEFILE_64}"'
 	${Else}
 		Push "$inst_dir\${READMEFILE_32}"
 		Call ConvertUnixNewLines
-		ExecShell "open" "$inst_dir\${READMEFILE_32}"
+		Exec 'notepad.exe "$inst_dir\${READMEFILE_32}"'
 	${EndIf}
 FunctionEnd
 

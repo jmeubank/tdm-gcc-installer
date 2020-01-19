@@ -32,6 +32,7 @@ public:
 
 	const tinyxml2::XMLElement* GetComponent(const StringType& comp_id) const;
 	tinyxml2::XMLElement* SetComponent(const StringType& comp_id);
+	void MarkComponentSuccess(bool success);
 	void AddEntry(const char* entry);
 
 private:

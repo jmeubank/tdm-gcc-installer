@@ -758,22 +758,21 @@ extern "C" void __declspec(dllexport) EnumArchives
 	 it != alist.end();
 	 ++it)
 	{
-		const char* ar_path = (*it)->Attribute("path");
-		if (ar_path && strlen(ar_path) > 0)
-		{
-			int at = strlen(ar_path) - 2;
-			for (; at >= 0 && ar_path[at] != '/';
-			 --at);
-			NSIS::pushstring(ar_path + at + 1);
-			NSIS::pushstring(at >= 0 ?
-			 std::string(ar_path).substr(0, at + 1).c_str()
-			 :
-			 "");
-			NSIS::ExecuteCallback(callback);
-			result = NSIS::popstring();
-			if (result != "OK")
-				break;
-		}
+		std::string ar_path = (*it)->Attribute("path");
+		if (!ar_path.length())
+			continue;
+		size_t file_end = 0;
+		for (; file_end < ar_path.length() && ar_path[file_end] != '?'; ++file_end)
+			;
+		size_t path_end = file_end;
+		for (; path_end >= 0 && ar_path[path_end] != '/' && ar_path[path_end] != '\\'; --path_end)
+			;
+		NSIS::pushstring(ar_path.substr(path_end + 1, file_end - path_end - 1).c_str());
+		NSIS::pushstring(ar_path.c_str());
+		NSIS::ExecuteCallback(callback);
+		result = NSIS::popstring();
+		if (result != "OK")
+			break;
 	}
 	NSIS::pushstring(result.c_str());
 }
@@ -1111,7 +1110,6 @@ extern "C" void __declspec(dllexport) RemoveAndAdd
 	inst_man->SetComponent("MiscFiles");
 	mkdir((inst_loc + "/__installer").c_str());
 	inst_man->AddEntry("__installer/");
-	inst_man->AddEntry("__installer/installed_man.txt");
 
 	StringType final_result = "OK";
 
@@ -1130,46 +1128,52 @@ extern "C" void __declspec(dllexport) RemoveAndAdd
 			continue;
 		}
 		inst_man->SetComponent(comp_id);
+		inst_man->MarkComponentSuccess(false);
 		/* Get the path of the archive */
-		const char* ar_path = (*it)->Attribute("path");
-		if (!ar_path || strlen(ar_path) <= 0)
+		std::string ar_path = (*it)->Attribute("path");
+		if (!ar_path.length())
 		{
 			++cur_op_index;
 			continue;
 		}
-		/* Get the position of the trailing slash in the archive path */
-		int at = strlen(ar_path) - 2;
-		for (; at >= 0 && ar_path[at] != '/'; --at)
+		/* Get the position of the end of the file name, before a trailing '?'
+		 * if one exists. This is like "basename(path)".
+		 */
+		size_t file_end = 0;
+		for (; file_end < ar_path.length() && ar_path[file_end] != '?'; ++file_end)
 			;
+		/* Get the position of the end of the path component, including the
+		 * trailing '/' or '\', if any path component exists. This is like
+		 * "dirname(path)".
+		 */
+		size_t path_end = file_end;
+		for (; path_end > 0 && ar_path[path_end] != '/' && ar_path[path_end] != '\\'; --path_end)
+			;
+		StringType ar_file = ar_path.substr(path_end + 1, file_end - path_end - 1);
 		/* Check all local paths where archives could be stored to find it */
 		std::list< StringType >::const_iterator it2 = local_paths.begin();
 		for (; it2 != local_paths.end(); ++it2)
 		{
-			if (FileExists((*it2 + "\\" + (ar_path + at + 1)).c_str()))
+			if (FileExists((*it2 + "\\" + ar_file).c_str()))
 				break;
 		}
 		if (it2 == local_paths.end())
 		{
-			final_result = StringType("Couldn't find local archive '") + ar_path + "'";
+			if (final_result == "OK")
+				final_result = StringType("Couldn't find local archive '") + ar_file + "'";
 			++cur_op_index;
 			continue;
 		}
 		/* Unpack the archive */
 		found_features_lua.clear();
-		RAOnCallback(ar_path + at + 1, false, false, true);
+		RAOnCallback(ar_file.c_str(), false, false, true);
 		StringType result = InstallArchive(
 			inst_loc.c_str(),
-			(*it2 + "\\" + (ar_path + at + 1)).c_str(),
+			(*it2 + "\\" + ar_file).c_str(),
 			*RefGetPtr(inst_man),
 			RAOnCallback
 		);
-		if (result != "OK")
-		{
-			final_result = result;
-			++cur_op_index;
-			continue;
-		}
-		if (!found_features_lua.empty())
+		if (result == "OK" && !found_features_lua.empty())
 		{
 			StringType processed_file;
 			result = ProcessFeaturesLua(inst_loc, found_features_lua, processed_file);
@@ -1179,6 +1183,10 @@ extern "C" void __declspec(dllexport) RemoveAndAdd
 				inst_man->AddEntry(processed_file.c_str());
 			}
 		}
+		if (result == "OK")
+			inst_man->MarkComponentSuccess(true);
+		else if (final_result == "OK")
+			final_result = result;
 		++cur_op_index;
 	}
 

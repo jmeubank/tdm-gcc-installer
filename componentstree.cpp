@@ -365,7 +365,6 @@ void ComponentsTree::WriteInstMan
 						new_el->SetAttribute(attribute->Name(),
 						 attribute->Value());
 					}
-					new_el->SetAttribute("prev", "true");
 					for (XMLElement* clone_el =
 					  XMLHandle(item->element->Parent()).ToElement();
 					 clone_el && strcmp(clone_el->Value(), "System") != 0;

@@ -84,6 +84,17 @@ tinyxml2::XMLElement* InstallManifest::SetComponent(const StringType& comp_id)
 }
 
 
+void InstallManifest::MarkComponentSuccess(bool success)
+{
+	if (cur_comp == entry_setmap.end())
+		return;
+	if (success)
+		cur_comp->second.first->SetAttribute("prev", "true");
+	else
+		cur_comp->second.first->DeleteAttribute("prev");
+}
+
+
 void InstallManifest::AddEntry(const char* entry)
 {
 	if (cur_comp == entry_setmap.end())
