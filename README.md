@@ -7,7 +7,7 @@
 
 TDM-GCC is a Windows-friendly version of the GCC compiler that lets you write
 programs with no DLL dependence. To download and use TDM-GCC, please visit
-[http://tdm-gcc.tdragon.net/].
+[https://jmeubank.github.io/tdm-gcc/].
 
 
 ## tdminstall
