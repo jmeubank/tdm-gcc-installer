@@ -34,11 +34,11 @@ typedef std::list< tinyxml2::XMLElement* > ElementList;
 
 enum ItemType
 {
-	ITEM_HEADER,
-	ITEM_CATEGORY,
-	ITEM_COMPONENT,
-	ITEM_VERSION,
-	ITEM_EXTRA
+	ITEM_HEADER = 0,
+	ITEM_CATEGORY = 1,
+	ITEM_COMPONENT = 2,
+	ITEM_VERSION = 3,
+	ITEM_EXTRA = 4
 };
 
 
@@ -71,9 +71,7 @@ public:
 	bool OnStateToggle(HTREEITEM hitem);
 
 	int GetArchivesToInstall(ElementList& list) const;
-	int GetComponentsToRemove
-	 (ElementList& list,
-	  tinyxml2::XMLDocument* full_uninst = 0) const;
+	int GetComponentsToRemove(ElementList& list) const;
 
 	void WriteInstMan
 	 (const StringType& outpath,

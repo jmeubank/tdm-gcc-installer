@@ -32,13 +32,15 @@ public:
 
 	const tinyxml2::XMLElement* GetComponent(const StringType& comp_id) const;
 	tinyxml2::XMLElement* SetComponent(const StringType& comp_id);
-	void MarkComponentSuccess(bool success);
 	void AddEntry(const char* entry);
+	size_t DecrementRemove(const char* entry);
 
 private:
-	typedef std::map< std::string, std::pair< tinyxml2::XMLElement*, std::set< std::string > > > EntrySetMap;
-	EntrySetMap entry_setmap;
-	EntrySetMap::iterator cur_comp;
+	typedef std::map <std::string, std::pair <tinyxml2::XMLElement*, std::set <std::string> > > IDToEntrySet_Map;
+	IDToEntrySet_Map entry_setmap;
+	IDToEntrySet_Map::iterator cur_comp;
+	typedef std::map <std::string, size_t> EntryToRefCount_Map;
+	EntryToRefCount_Map entry_ref_counts;
 	tinyxml2::XMLDocument doc;
 };
 

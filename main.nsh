@@ -14,15 +14,15 @@
 !define DEF_INST_DIR_32 "\TDM-GCC-32"
 !define DEF_INST_DIR_64 "\TDM-GCC-64"
 !define LOCAL_NET_MANIFEST "net-manifest.txt"
-;!define NET_MANIFEST_URL "http://tdragon.net/tdminst/net-manifest.txt"
-!define NET_MANIFEST_URL "C:\crossdev\gccmaster\distrib\net-manifest.txt.new.txt"
+!define NET_MANIFEST_URL "https://jmeubank.github.io/tdm-gcc/net-manifest.txt"
+;!define NET_MANIFEST_URL "http://localhost:4000/net-manifest.txt"
 !define DEFAULT_BASE_URL "http://downloads.sourceforge.net/project/"
 !define APPDATA_SUBFOLDER "TDM-GCC"
 !define STARTMENU_ENTRY_32 "TDM-GCC-32"
 !define STARTMENU_ENTRY_64 "TDM-GCC-64"
 !define UNINSTKEY "TDM-GCC"
-!define READMEFILE_32 "README-gcc-tdm.txt"
-!define READMEFILE_64 "README-gcc-tdm64.txt"
+!define READMEFILE_32 "README-gcc-tdm.md"
+!define READMEFILE_64 "README-gcc-tdm64.md"
 !define INFOURL "http://tdm-gcc.tdragon.net/"
 !define UPDATEURL "http://tdm-gcc.tdragon.net/"
 !define PUBLISHER "TDM"
@@ -146,8 +146,10 @@ Section "Install Components" SEC_INSTALL_COMPONENTS
 	tdminstall::AddManMiscFile /NOUNLOAD "__installer/"
 
 	; This executable
-	CopyFiles /SILENT "$EXEPATH" "$inst_dir\__installer"
-	tdminstall::AddManMiscFile /NOUNLOAD "__installer/$EXEFILE"
+	${IfNot} ${FileExists} "$inst_dir\__installer\$EXEFILE"
+		CopyFiles /SILENT "$EXEPATH" "$inst_dir\__installer"
+		tdminstall::AddManMiscFile /NOUNLOAD "__installer/$EXEFILE"
+	${EndIf}
 
 	CreateDirectory "$inst_dir\__installer\downloaded"
 	tdminstall::AddManMiscFile /NOUNLOAD "__installer/downloaded/"
@@ -175,7 +177,7 @@ Section "Install Components" SEC_INSTALL_COMPONENTS
 		${EndIf}
 	${EndIf}
 
-	; Install archives
+	; Install (and/or remove) archives
 	GetFunctionAddress $0 "ItemBeforeActionCallback"
 	tdminstall::RemoveAndAdd /NOUNLOAD \
 	 "$inst_dir\__installer\downloaded|$EXEDIR\downloaded|$PLUGINSDIR" $0
@@ -399,7 +401,7 @@ Function .onInit
 !ifdef INNER_COMPONENTS
 !system 'echo inner-manifest-${INNER_COMPONENTS_SYS}.txt>"${OUTPUT_DIR}/arcreg.${INNER_COMPONENTS_SYS}.template.txt"'
 !system 'echo System:id:${INNER_COMPONENTS_SYS}>>"${OUTPUT_DIR}/arcreg.${INNER_COMPONENTS_SYS}.template.txt"'
-!system 'echo Archive:path:.*/([^^?]+)>>"${OUTPUT_DIR}/arcout.${INNER_COMPONENTS_SYS}.template.txt"'
+!system 'echo Archive:path:.*/([^^?]+)>>"${OUTPUT_DIR}/arcreg.${INNER_COMPONENTS_SYS}.template.txt"'
 !system 'echo ^]^]^>^]^]^>>>"${OUTPUT_DIR}/arcreg.${INNER_COMPONENTS_SYS}.template.txt"'
 !system 'echo tdminstall::RegisterInnerArchive /NOUNLOAD "@()@">>"${OUTPUT_DIR}/arcreg.${INNER_COMPONENTS_SYS}.template.txt"'
 !system '${OUTPUT_DIR}/ctemplate.exe <"${OUTPUT_DIR}/arcreg.${INNER_COMPONENTS_SYS}.template.txt" >${OUTPUT_DIR}/arcreg.${INNER_COMPONENTS_SYS}.nsh' = 0
@@ -490,10 +492,12 @@ dlfile:
 		 IDRETRY dlfile
 		DetailPrint "$0"
 		StrCpy $0 "Couldn't download '$1'"
+		Goto errorend
 	${EndIf}
 	IntOp $ar_dl_index $ar_dl_index + 1
 	tdminstall::AddManMiscFile /NOUNLOAD "__installer/downloaded/$apc_file"
 
+errorend:
 	Exch $0
 FunctionEnd
 

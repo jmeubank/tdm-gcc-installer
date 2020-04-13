@@ -95,6 +95,17 @@ static int itype_custom = -1, itype_current = -1;
 static std::vector< StringType > mirrors;
 
 
+static std::string fmt(const char* format_string, ...)
+{
+	char buf[2048];
+	va_list ap;
+	va_start(ap, format_string);
+	vsnprintf(buf, 2048, format_string, ap);
+	va_end(ap);
+	return std::string(buf);
+}
+
+
 static StringType FormatSize(unsigned size)
 {
 	unsigned divby = 1;
@@ -438,7 +449,7 @@ extern "C" void __declspec(dllexport) SetManifest
 	StringType fname = NSIS::popstring();
 	HWND parentwnd = (HWND)NSIS::popint();
 
-	working_man = XMLDocumentRef(new tinyxml2::XMLDocument);
+	working_man = XMLDocumentRef(new tinyxml2::XMLDocument(true, tinyxml2::COLLAPSE_WHITESPACE));
 	if (working_man->LoadFile(fname.c_str()) == XML_SUCCESS)
 	{
 		XMLElement* minver =
@@ -826,7 +837,7 @@ extern "C" void __declspec(dllexport) SetPrevInstMan
 	StringType mfile = NSIS::popstring();
 	if (mfile.length() > 0)
 	{
-		XMLDocumentRef newprev(new tinyxml2::XMLDocument);
+		XMLDocumentRef newprev(new tinyxml2::XMLDocument(true, tinyxml2::COLLAPSE_WHITESPACE));
 		if (newprev->LoadFile(mfile.c_str()) == XML_SUCCESS)
 		{
 			prev_man = newprev;
@@ -838,8 +849,8 @@ extern "C" void __declspec(dllexport) SetPrevInstMan
 }
 
 /* Checks if two paths are the same or one is a child of the other. Very basic;
- * Very basic; treats backslash and forward slash as equivalent and ignores
- * case, but doesn't account for doubled slashes or other presumed oddness.
+ * treats backslash and forward slash as equivalent and ignores case, but
+ * doesn't account for doubled slashes or other entirely possible oddness.
  */
 static bool paths_are_common(const char* p1, const char* p2)
 {
@@ -847,7 +858,7 @@ static bool paths_are_common(const char* p1, const char* p2)
 	for (; *p1 != '\0' && *p2 != '\0'; ++p1, ++p2)
 	{
 		/* Consider backslash and forward slash as equivalent */
-		if ((*p1 == '/' || *p2 == '\\') && (*p2 == '/' || *p2 == '\\'))
+		if ((*p1 == '/' || *p1 == '\\') && (*p2 == '/' || *p2 == '\\'))
 			continue;
 		/* Do a case-insensitive comparison */
 		if (tolower(*p1) != tolower(*p2))
@@ -856,9 +867,9 @@ static bool paths_are_common(const char* p1, const char* p2)
 	/* Since one of the chars is '\0', make sure the other one is '\0'
 	 * or a path separator.
 	 */
-	if (*p1 && *p1 != '/' && *p1 != '\\')
+	if (*p1 != '\0' && *p1 != '/' && *p1 != '\\')
 		return false;
-	if (*p2 && *p2 != '/' && *p2 != '\\')
+	if (*p2 != '\0' && *p2 != '/' && *p2 != '\\')
 		return false;
 
 	return true;
@@ -872,7 +883,7 @@ static bool paths_are_common(const char* p1, const char* p2)
  * If we spot var/lib/wsl/features.lua in any archive, we will run it accordingly.
  */
 static StringType ProcessFeaturesLua(const StringType& base_path, const StringType& script_path,
-	StringType& processed_path)
+	StringType& processed_path_out)
 {
 	/* Set MINGW32_SYSROOT for features.lua to grab */
 	_putenv((StringType("MINGW32_SYSROOT=") + base_path).c_str());
@@ -888,7 +899,7 @@ static StringType ProcessFeaturesLua(const StringType& base_path, const StringTy
 	{
 		StringType const& base_path;
 		StringType const& script_path;
-		StringType& processed_path;
+		StringType& processed_path_out;
 
 		/* Inside this function, all dangerous Lua functions that might longjmp
 		 * will be stopped by a lua_pcall setjmp, and converted to an error on
@@ -941,7 +952,7 @@ static StringType ProcessFeaturesLua(const StringType& base_path, const StringTy
 				for (; *pname == '/' || *pname == '\\'; ++pname)
 					;
 			}
-			p->processed_path = pname;
+			p->processed_path_out = pname;
 
 			/* Now we have the path we want, add the open parameter ('w' for
 			 * writing) and finish calling the io.open function. This leaves
@@ -957,14 +968,12 @@ static StringType ProcessFeaturesLua(const StringType& base_path, const StringTy
 			 */
 			lua_call(L, 1, 0);
 
-			/* All that should be left on the stack is the features.lua
-			 * returned module.
-			 */
+			/* Pop the features.lua returned module. */
 			lua_pop(L, 1);
 
 			return 0;
 		}
-	} lfp = {base_path, script_path, processed_path};
+	} lfp = {base_path, script_path, processed_path_out};
 
 	/* Go inside lua_pcall to do our work */
 	lua_pushcfunction(RefGetPtr(L), LuaFeaturesProtector::run);
@@ -1008,6 +1017,8 @@ static int RAOnCallback(const char* file, bool is_dir, bool is_del, bool is_arc)
 
 static void RemoveEntry(const char* base, const char* entry)
 {
+	if (inst_man && inst_man->DecrementRemove(entry) > 0)
+		return;
 	char ent[1024];
 	strncpy(ent, base, 1023);
 	int blen = strlen(ent);
@@ -1102,6 +1113,9 @@ extern "C" void __declspec(dllexport) RemoveAndAdd
 				RemoveEntry(inst_loc.c_str(), etxt->Value());
 			++cur_file_in_op_index;
 		}
+		XMLElement* comp_el = inst_man->SetComponent((*it)->Attribute("id"));
+		if (comp_el)
+			comp_el->DeleteChildren();
 		++cur_op_index;
 	}
 
@@ -1128,7 +1142,6 @@ extern "C" void __declspec(dllexport) RemoveAndAdd
 			continue;
 		}
 		inst_man->SetComponent(comp_id);
-		inst_man->MarkComponentSuccess(false);
 		/* Get the path of the archive */
 		std::string ar_path = (*it)->Attribute("path");
 		if (!ar_path.length())
@@ -1183,9 +1196,7 @@ extern "C" void __declspec(dllexport) RemoveAndAdd
 				inst_man->AddEntry(processed_file.c_str());
 			}
 		}
-		if (result == "OK")
-			inst_man->MarkComponentSuccess(true);
-		else if (final_result == "OK")
+		if (result != "OK" && final_result == "OK")
 			final_result = result;
 		++cur_op_index;
 	}
@@ -1825,7 +1836,7 @@ extern "C" void __declspec(dllexport) RemoveInst
 		NSIS::pushstring("Uninstall location hasn't been set");
 		return;
 	}
-	tinyxml2::XMLDocument mdoc;
+	tinyxml2::XMLDocument mdoc(true, tinyxml2::COLLAPSE_WHITESPACE);
 	if (mdoc.LoadFile((uninstloc + "\\__installer\\installed_man.txt").c_str()) != XML_SUCCESS)
 	{
 		StringType estr = std::string("Couldn't load '") + uninstloc
@@ -1834,12 +1845,30 @@ extern "C" void __declspec(dllexport) RemoveInst
 		return;
 	}
 
-	StringType ret = "OK";
-
 	cur_op_index = 0;
 
+	num_addremove_ops = 0;
 	ElementList rlist;
-	num_addremove_ops = ctree.GetComponentsToRemove(rlist, &mdoc);
+	std::list< XMLElement* > search_els;
+	search_els.push_back(mdoc.RootElement());
+	while (!search_els.empty())
+	{
+		XMLElement* el = search_els.front();
+		search_els.pop_front();
+		XMLElement* child = el->FirstChildElement();
+		if (!child)
+			continue;
+		if (strcmp(child->Value(), "Entry") == 0)
+		{
+			++num_addremove_ops;
+			rlist.push_back(el);
+		}
+		else
+		{
+			for (; child; child = child->NextSiblingElement())
+				search_els.push_back(child);
+		}
+	}
 
 	// Remove components //
 
@@ -1896,7 +1925,7 @@ extern "C" void __declspec(dllexport) RemoveInst
 		}
 	}
 
-	NSIS::pushstring(ret.c_str());
+	NSIS::pushstring("OK");
 }
 
 
@@ -2107,7 +2136,7 @@ extern "C" void __declspec(dllexport) GetSystemID
 	StringType path = NSIS::popstring();
 
 	const char* id = 0;
-	tinyxml2::XMLDocument doc;
+	tinyxml2::XMLDocument doc(true, tinyxml2::COLLAPSE_WHITESPACE);
 	if (doc.LoadFile((path + "\\__installer\\installed_man.txt").c_str()) == XML_SUCCESS)
 	{
 		XMLElement* sys_el

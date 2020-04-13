@@ -29,6 +29,7 @@ target_include_directories(
     "$ENV{XARC_INCLUDE}"
 )
 target_compile_options(tdminstall_support PRIVATE -Os -flto)
+#target_compile_options(tdminstall_support PRIVATE -Os)
 
 configure_file(setup_version.h.in setup_version.h @ONLY)
 add_library(
@@ -45,6 +46,8 @@ target_include_directories(
 )
 target_compile_options(tdminstall PRIVATE -Os -flto)
 target_link_options(tdminstall PRIVATE -s -Os -flto)
+#target_compile_options(tdminstall PRIVATE -Os)
+#target_link_options(tdminstall PRIVATE -s -Os)
 set_target_properties(tdminstall PROPERTIES PREFIX "")
 target_link_libraries(
     tdminstall

@@ -26,6 +26,17 @@ using namespace tinyxml2;
 typedef RefType< XMLDocument >::Ref XMLDocumentRef;
 
 
+static std::string fmt(const char* format_string, ...)
+{
+	char buf[2048];
+	va_list ap;
+	va_start(ap, format_string);
+	vsnprintf(buf, 2048, format_string, ap);
+	va_end(ap);
+	return std::string(buf);
+}
+
+
 static const char* NonEmptyAttribute(XMLElement* el, const char* attr)
 {
 	const char* val = el->Attribute(attr);
@@ -38,7 +49,6 @@ struct Item
 	typedef RefType< Item >::Ref Ref;
 
 	ItemType type;
-	StringType text;
 	XMLElement* element;
 	HTREEITEM handle;
 	bool prev_inst;
@@ -152,26 +162,11 @@ bool ComponentsTree::OnStateToggle(HTREEITEM hitem)
 		tvitem.state = SetCheckState(item,
 		 (cstate == CHECK_FULL) ? CHECK_NONE : CHECK_FULL);
 		TreeView_SetItem(htreeview, &tvitem);
-		Item* vhitem = 0;
-		HTREEITEM vh = TreeView_GetChild(htreeview, hitem);
-		if (vh)
-			vhitem = GetItemFromHandle(vh);
-		if (vh && (!vhitem || vhitem->type == ITEM_HEADER))
-		{
-			for (HTREEITEM hver = TreeView_GetChild(htreeview, vh);
-			 hver;
-			 hver = TreeView_GetNextSibling(htreeview, hver))
-			{
-				Item* vitem = GetItemFromHandle(hver);
-				if (vitem && vitem->check == CHECK_FULL)
-				{
-					ToggleSel(vitem);
-					break;
-				}
-			}
-		}
-		else
-			ToggleSel(item);
+		/* If the component has Version children, ToggleSel takes care of
+		 * toggling the selected-for-install status of whichever Version's
+		 * radio button is active.
+		 */
+		ToggleSel(item);
 		UpdateAncestors(hitem, (cstate != CHECK_FULL));
 		return true;
 	}
@@ -181,62 +176,61 @@ bool ComponentsTree::OnStateToggle(HTREEITEM hitem)
 		tvitem.state = SetCheckState(item, CHECK_FULL);
 		TreeView_SetItem(htreeview, &tvitem);
 		HTREEITEM vh = TreeView_GetParent(htreeview, hitem);
-		if (vh)
+		if (!vh)
+			return true;
+		bool togglesel = false;
+		HTREEITEM vparent = TreeView_GetParent(htreeview, vh);
+		if (vparent)
 		{
-			bool togglesel = false;
-			HTREEITEM vparent = TreeView_GetParent(htreeview, vh);
-			if (vparent)
+			Item* pitem = GetItemFromHandle(vparent);
+			if (pitem && pitem->type == ITEM_COMPONENT && pitem->check == CHECK_FULL)
 			{
-				Item* pitem = GetItemFromHandle(vparent);
-				if (pitem && pitem->type == ITEM_COMPONENT && pitem->check == CHECK_FULL)
+				ToggleSel(item);
+				togglesel = true;
+			}
+			else
+				UpdateVersionedComps(vparent, hitem);
+			if (pitem && pitem->handle && pitem->element)
+			{
+				const char* pname =
+					NonEmptyAttribute(pitem->element, "name");
+				if (pname)
 				{
-					ToggleSel(item);
-					togglesel = true;
-				}
-				else
-					UpdateVersionedComps(vparent, hitem);
-				if (pitem && pitem->handle && pitem->element)
-				{
-					const char* pname =
-					 NonEmptyAttribute(pitem->element, "name");
-					if (pname)
-					{
-						TVITEM ptvitem;
-						ptvitem.hItem = pitem->handle;
-						ptvitem.mask = TVIF_TEXT;
-						char newtxt[200];
-						snprintf(newtxt, 199, "%s (%s)", pname,
-						 item->element->Attribute("name"));
-						ptvitem.pszText = newtxt;
-						ptvitem.cchTextMax = 199;
-						TreeView_SetItem(htreeview, &ptvitem);
-					}
+					TVITEM ptvitem;
+					ptvitem.hItem = pitem->handle;
+					ptvitem.mask = TVIF_TEXT;
+					char newtxt[200];
+					snprintf(newtxt, 199, "%s (%s)", pname,
+						item->element->Attribute("name"));
+					ptvitem.pszText = newtxt;
+					ptvitem.cchTextMax = 199;
+					TreeView_SetItem(htreeview, &ptvitem);
 				}
 			}
-			for (HTREEITEM vsib = TreeView_GetChild(htreeview, vh);
-			 vsib;
-			 vsib = TreeView_GetNextSibling(htreeview, vsib))
+		}
+		for (HTREEITEM vsib = TreeView_GetChild(htreeview, vh);
+			vsib;
+			vsib = TreeView_GetNextSibling(htreeview, vsib))
+		{
+			if (vsib == hitem)
+				continue;
+			TVITEM ctvitem;
+			ctvitem.hItem = vsib;
+			ctvitem.mask = TVIF_STATE | TVIF_PARAM;
+			ctvitem.stateMask = TVIS_STATEIMAGEMASK;
+			if (TreeView_GetItem(htreeview, &ctvitem))
 			{
-				if (vsib == hitem)
-					continue;
-				TVITEM ctvitem;
-				ctvitem.hItem = vsib;
-				ctvitem.mask = TVIF_STATE | TVIF_PARAM;
-				ctvitem.stateMask = TVIS_STATEIMAGEMASK;
-				if (TreeView_GetItem(htreeview, &ctvitem))
+				if (ctvitem.lParam > 0)
 				{
-					if (ctvitem.lParam > 0)
+					Item* citem = RefGetPtr(index_items[ctvitem.lParam - 1]);
+					if (citem->check == CHECK_FULL)
 					{
-						Item* citem = RefGetPtr(index_items[ctvitem.lParam - 1]);
-						if (citem->check == CHECK_FULL)
-						{
-							ctvitem.mask = TVIF_STATE;
-							ctvitem.state = SetCheckState(citem, CHECK_NONE);
-							TreeView_SetItem(htreeview, &ctvitem);
-							if (togglesel)
-								ToggleSel(citem);
-							break;
-						}
+						ctvitem.mask = TVIF_STATE;
+						ctvitem.state = SetCheckState(citem, CHECK_NONE);
+						TreeView_SetItem(htreeview, &ctvitem);
+						if (togglesel)
+							ToggleSel(citem);
+						break;
 					}
 				}
 			}
@@ -263,58 +257,34 @@ int ComponentsTree::GetArchivesToInstall(ElementList& list) const
 	for (size_t i = 0; i < index_items.size(); ++i)
 	{
 		Item* item = RefGetPtr(index_items[i]);
-		if (item->selected && !item->prev_inst && item->element)
+		if (!item->selected || item->prev_inst || !item->element)
+			continue;
+		for (XMLElement* ar_el =
+			item->element->FirstChildElement("Archive");
+			ar_el;
+			ar_el = ar_el->NextSiblingElement("Archive"))
 		{
-			for (XMLElement* ar_el =
-			  item->element->FirstChildElement("Archive");
-			 ar_el;
-			 ar_el = ar_el->NextSiblingElement("Archive"))
-			{
-				++inst_count;
-				list.push_back(ar_el);
-			}
+			++inst_count;
+			list.push_back(ar_el);
 		}
 	}
 	return inst_count;
 }
 
 
-int ComponentsTree::GetComponentsToRemove
- (ElementList& list,
-  XMLDocument* full_uninst) const
+int ComponentsTree::GetComponentsToRemove(ElementList& list) const
 {
 	int uninst_count = 0;
-	if (!full_uninst)
+	for (size_t i = 0; i < index_items.size(); ++i)
 	{
-		for (size_t i = 0; i < index_items.size(); ++i)
+		Item* item = RefGetPtr(index_items[i]);
+		const char* item_id = nullptr;
+		if (item->element)
+			item_id = NonEmptyAttribute(item->element, "id");
+		if (!item->selected && item->prev_inst && item_id && strcmp(item_id, "MiscFiles") != 0)
 		{
-			Item* item = RefGetPtr(index_items[i]);
-			if (!item->selected && item->prev_inst && item->element)
-			{
-				++uninst_count;
-				list.push_back(item->element);
-			}
-		}
-	}
-	else
-	{
-		std::list< XMLElement* > search_els;
-		search_els.push_back(full_uninst->RootElement());
-		while (!search_els.empty())
-		{
-			XMLElement* el = search_els.front();
-			search_els.pop_front();
-			XMLElement* child = el->FirstChildElement();
-			if (strcmp(child->Value(), "Entry") == 0)
-			{
-				++uninst_count;
-				list.push_back(el);
-			}
-			else
-			{
-				for (; child; child = child->NextSiblingElement())
-					search_els.push_back(child);
-			}
+			++uninst_count;
+			list.push_back(item->element);
 		}
 	}
 	return uninst_count;
@@ -325,82 +295,87 @@ void ComponentsTree::WriteInstMan
  (const StringType& outpath,
   const InstallManifest& inst_man)
 {
+	/* Populate the root and System */
 	XMLDocument out;
 	XMLElement* root = out.NewElement("TDMInstallManifest");
 	out.LinkEndChild(root);
 	XMLElement* sys = m_doc->FirstChildElement("TDMInstallManifest")->FirstChildElement("System");
 	if (!sys)
 		return;
-	XMLElement* sys_out = out.NewElement("System");
-	const XMLAttribute* attribute;
-	for (attribute = sys->FirstAttribute();
-	 attribute;
-	 attribute = attribute->Next())
-	{
-		sys_out->SetAttribute(attribute->Name(),
-		 attribute->Value());
-	}
+	XMLElement* sys_out = sys->ShallowClone(&out)->ToElement();
 	root->LinkEndChild(sys_out);
+
+	/* Populate all selected items */
 	typedef std::map< std::string, XMLElement* > IDElementMap;
 	IDElementMap linked_map;
-	// std::stack< XMLElement* > hierarchy;
 	for (size_t i = 0; i < index_items.size(); ++i)
 	{
 		Item* item = RefGetPtr(index_items[i]);
-		if (item->selected && item->element)
+		if (!item->element)
+			continue;
+		const char* item_id = NonEmptyAttribute(item->element, "id");
+		if (!item_id || strcmp(item_id, "MiscFiles") == 0)
+			continue;
+		const XMLElement* entry_comp = inst_man.GetComponent(item_id);
+		if (!entry_comp || !entry_comp->FirstChildElement("Entry"))
+			continue;
+		XMLElement* link_el = sys_out;
+		/* First, deep clone the Component element from the updated
+		 * InstallManifest. This grabs all the installed Entry
+		 * children, but none of the original attributes of the
+		 * element.
+		 */
+		XMLElement* new_el = entry_comp->DeepClone(&out)->ToElement();
+		/* Then, add in all the attributes of the element from
+		 * the original net-manifest.
+		 */
+		new_el->SetValue(item->element->Value());
+		for (const XMLAttribute* attribute = item->element->FirstAttribute();
+			attribute;
+			attribute = attribute->Next())
 		{
-			const char* item_id = NonEmptyAttribute(item->element, "id");
-			if (item_id)
-			{
-				const XMLElement* entry_comp = inst_man.GetComponent(item_id);
-				if (entry_comp)
-				{
-					XMLElement* link_el = sys_out;
-					XMLElement* new_el = entry_comp->DeepClone(&out)->ToElement();
-					new_el->SetValue(item->element->Value());
-					for (attribute = item->element->FirstAttribute();
-					 attribute;
-					 attribute = attribute->Next())
-					{
-						new_el->SetAttribute(attribute->Name(),
-						 attribute->Value());
-					}
-					for (XMLElement* clone_el =
-					  XMLHandle(item->element->Parent()).ToElement();
-					 clone_el && strcmp(clone_el->Value(), "System") != 0;
-					 clone_el = XMLHandle(clone_el->Parent()).ToElement())
-					{
-						IDElementMap::iterator found = linked_map.end();
-						const char* el_id = NonEmptyAttribute(clone_el, "id");
-						if (el_id)
-							found = linked_map.find(el_id);
-						if (found != linked_map.end())
-						{
-							link_el = found->second;
-							break;
-						}
-						else
-						{
-							XMLElement* el = out.NewElement(clone_el->Value());
-							for (attribute = clone_el->FirstAttribute();
-							 attribute;
-							 attribute = attribute->Next())
-							{
-								el->SetAttribute(attribute->Name(),
-								 attribute->Value());
-							}
-							el->LinkEndChild(new_el);
-							const char* new_id = NonEmptyAttribute(el, "id");
-							if (new_id)
-								linked_map.insert(std::make_pair(std::string(new_id), el));
-							new_el = el;
-						}
-					}
-					link_el->LinkEndChild(new_el);
-				}
-			}
+			new_el->SetAttribute(attribute->Name(),
+				attribute->Value());
 		}
+		new_el->SetAttribute("prev", "true");
+		/* Next, shallow clone this Component element's ancestors
+		 * until we reach an element that's already been linked
+		 * into the output installed_man. If we don't find an
+		 * already-linked ID, it will be linked to the System
+		 * element.
+		 */
+		for (XMLElement* clone_el =
+			XMLHandle(item->element->Parent()).ToElement();
+			clone_el && strcmp(clone_el->Value(), "System") != 0;
+			clone_el = XMLHandle(clone_el->Parent()).ToElement())
+		{
+			/* Look for an already-linked element matching this ancestor
+			 * element's ID.
+			 */
+			IDElementMap::iterator found = linked_map.end();
+			const char* el_id = NonEmptyAttribute(clone_el, "id");
+			if (el_id)
+				found = linked_map.find(el_id);
+			/* If an already-linked element is found, choose it to link into.
+			 */
+			if (found != linked_map.end())
+			{
+				link_el = found->second;
+				break;
+			}
+			/* Otherwise, shallow clone this ancestor element and keep
+			 * traversing upward.
+			 */
+			XMLElement* el = clone_el->ShallowClone(&out)->ToElement();
+			el->LinkEndChild(new_el);
+			const char* new_id = NonEmptyAttribute(el, "id");
+			if (new_id)
+				linked_map.insert(std::make_pair(std::string(new_id), el));
+			new_el = el;
+		}
+		link_el->LinkEndChild(new_el);
 	}
+
 	// MiscFiles node
 	const XMLElement* mfiles = inst_man.GetComponent("MiscFiles");
 	if (mfiles)
@@ -408,7 +383,7 @@ void ComponentsTree::WriteInstMan
 		XMLElement* new_el = mfiles->DeepClone(&out)->ToElement();
 		sys_out->LinkEndChild(new_el);
 	}
-	
+
 	out.SaveFile(outpath.c_str());
 }
 
@@ -445,31 +420,40 @@ bool ComponentsTree::IsSelected(int index) const
 void ComponentsTree::SetSelected(int index, bool selected)
 {
 	Item* item = RefGetPtr(index_items[index]);
-	if ((item->type == ITEM_COMPONENT || item->type == ITEM_VERSION)
-	 && item->selected != selected)
+	/* Only Component or Version elements, which have installable IDs, can be
+	 * programmatically selected and deselected.
+	 */
+	if ((item->type != ITEM_COMPONENT && item->type != ITEM_VERSION)
+	 || item->selected == selected)
+		return;
+	/* Set the item's parent version set as active if need be */
+	if (selected)
+		EnsureSelectable(item);
+	if (item->type == ITEM_VERSION)
 	{
-		if (selected)
-			EnsureSelectable(item);
-		if (!TreeView_GetChild(htreeview, item->handle))
-			OnStateToggle(item->handle);
-		if (item->type == ITEM_VERSION && !item->selected)
-		{
-			Item* vhitem;
-			HTREEITEM vh = TreeView_GetParent(htreeview, item->handle);
-			if (vh)
-				vhitem = GetItemFromHandle(vh);
-			if (vh && (!vhitem || vhitem->type == ITEM_HEADER))
-			{
-				HTREEITEM hparent = TreeView_GetParent(htreeview, vh);
-				if (hparent)
-				{
-					Item* pitem = GetItemFromHandle(hparent);
-					if (pitem && pitem->type == ITEM_COMPONENT)
-						OnStateToggle(hparent);
-				}
-			}
-		}
+		/* A Version element's parent may need to be toggled. */
+		HTREEITEM vh = TreeView_GetParent(htreeview, item->handle);
+		Item* vhitem = nullptr;
+		if (vh)
+			vhitem = GetItemFromHandle(vh);
+		HTREEITEM hparent = nullptr;
+		if (vhitem && vhitem->type == ITEM_HEADER)
+			hparent = TreeView_GetParent(htreeview, vh);
+		Item* pitem = nullptr;
+		if (hparent)
+			pitem = GetItemFromHandle(hparent);
+		/* In toggling a Version element, we toggle its parent Component,
+		 * except in the case where the parent was already toggled on and we
+		 * switched to this child Version already in EnsureSelectable.
+		 */
+		if (pitem && pitem->type == ITEM_COMPONENT && (!selected || !pitem->selected))
+			OnStateToggle(hparent);
 	}
+	/* After the EnsureSelectable call above, our item may have already been
+	 * selected, so check item->selected again.
+	 */
+	else if (item->selected != selected && !TreeView_GetChild(htreeview, item->handle))
+		OnStateToggle(item->handle);
 }
 
 
@@ -491,21 +475,19 @@ void ComponentsTree::DeselectAll()
 	for (size_t i = 0; i < index_items.size(); ++i)
 	{
 		Item* item = RefGetPtr(index_items[i]);
-		if (item->selected &&
-		 (item->type == ITEM_COMPONENT || item->type == ITEM_VERSION))
-		{
-			ToggleSel(item);
-			UINT st = SetCheckState(item, CHECK_NONE);
-			if (item->handle)
-			{
-				TVITEM tvitem;
-				tvitem.hItem = item->handle;
-				tvitem.mask = TVIF_STATE;
-				tvitem.stateMask = TVIS_STATEIMAGEMASK;
-				tvitem.state = st;
-				TreeView_SetItem(htreeview, &tvitem);
-			}
-		}
+		if (!item->selected ||
+			(item->type != ITEM_COMPONENT && item->type != ITEM_VERSION))
+				continue;
+		ToggleSel(item);
+		UINT st = SetCheckState(item, CHECK_NONE);
+		if (!item->handle)
+			continue;
+		TVITEM tvitem;
+		tvitem.hItem = item->handle;
+		tvitem.mask = TVIF_STATE;
+		tvitem.stateMask = TVIS_STATEIMAGEMASK;
+		tvitem.state = st;
+		TreeView_SetItem(htreeview, &tvitem);
 	}
 }
 
@@ -574,6 +556,9 @@ bool ComponentsTree::ProcessManifest
 		return false;
 	XMLElement* sys_copy = sys->ShallowClone(RefGetPtr(m_doc))->ToElement();
 	m_doc->FirstChildElement("TDMInstallManifest")->InsertEndChild(sys_copy);
+	/* We will do a breadth-first traversal with search_children as the stack,
+	 * popping from the front and pushing children onto the end.
+	 */
 	search_children.push_back(InsParent(sys, sys_copy, hroot));
 	while (!search_children.empty())
 	{
@@ -582,133 +567,148 @@ bool ComponentsTree::ProcessManifest
 		HTREEITEM hparent = search_children.front().handle;
 		search_children.pop_front();
 		HTREEITEM vh = 0;
+		/* Traverse all children of ex_parent (the parent element being
+		 * examined).
+		 */
 		for (XMLElement* el = ex_parent->FirstChildElement();
 		 el;
 		 el = el->NextSiblingElement())
 		{
+			/* Category, Component, and Version elements are the only ones with
+			 * children.
+			 */
 			const char* el_type = el->Value();
-			if (strcmp(el_type, "Category") == 0
-			 || strcmp(el_type, "Component") == 0
-			 || strcmp(el_type, "Version") == 0)
+			if (strcmp(el_type, "Category") != 0
+			 && strcmp(el_type, "Component") != 0
+			 && strcmp(el_type, "Version") != 0)
+				continue;
+			/* See if an element with a matching ID was loaded from a previous
+			 * merged manifest.
+			 */
+			HTREEITEM hitem = 0;
+			XMLElement* linked_el = nullptr;
+			const char* el_id = NonEmptyAttribute(el, "id");
+			Item* oitem = nullptr;
+			if (el_id)
 			{
-				HTREEITEM hitem = 0;
-				XMLElement* linked_el = 0;
-				const char* el_id = NonEmptyAttribute(el, "id");
-				if (el_id)
+				IDIndexMap::iterator found = id_items.find(el_id);
+				if (found != id_items.end())
+					oitem = RefGetPtr(index_items[found->second]);
+			}
+			/* If we matched an item then ... merge the incoming data into it.
+			 */
+			if (oitem)
+			{
+				hitem = oitem->handle;
+				if (oitem->element)
+					linked_el = oitem->element;
+				/* If the item has the "prev" marker, it's getting merged from
+				 * an installed_man.
+				 */
+				if (NonEmptyAttribute(el, "prev"))
 				{
-					IDIndexMap::iterator found = id_items.find(el_id);
-					if (found != id_items.end())
+					oitem->prev_inst = true;
+					EnsurePrevText(oitem);
+					UpdateItemAttrs(oitem, el, true);
+				}
+				else
+					UpdateItemAttrs(oitem, el, false);
+				/* Merge child Entry elements */
+				if (oitem->element && oitem->prev_inst)
+				{
+					oitem->element->SetAttribute("prev", "true");
+					/* Delete existing children (we are re-merging
+					 * from what may be an installed_man from a different
+					 * installation)
+					 */
+					oitem->element->DeleteChildren();
+					/* Then, merge the child Entry elements from the new
+					 * installed_man.
+					 */
+					for (XMLNode* node = el->FirstChild();
+						node;
+						node = node->NextSibling())
 					{
-						Item* oitem = RefGetPtr(index_items[found->second]);
-						hitem = oitem->handle;
-						if (oitem->element)
-							linked_el = oitem->element;
-						if (NonEmptyAttribute(el, "prev"))
-						{
-							oitem->prev_inst = true;
-							if (oitem->element)
-							{
-								oitem->element->SetAttribute("prev", "true");
-								XMLNode* node = oitem->element->FirstChild();
-								while (node)
-								{
-									XMLNode* temp = node;
-									node = node->NextSibling();
-									oitem->element->DeleteChild(temp);
-								}
-								node = el->FirstChild();
-								while (node)
-								{
-									oitem->element->LinkEndChild(node->ShallowClone(RefGetPtr(m_doc)));
-									node = node->NextSibling();
-								}
-							}
-							EnsurePrevText(oitem);
-							UpdateItemAttrs(oitem, el, true);
-						}
-						else
-							UpdateItemAttrs(oitem, el, false);
+						oitem->element->LinkEndChild(node->DeepClone(RefGetPtr(m_doc)));
 					}
 				}
-				if (!linked_el)
+			}
+			/* if we haven't we haven't already built an element for this item,
+			 * build one.
+			 */
+			if (!linked_el)
+			{
+				linked_el = el->ShallowClone(RefGetPtr(m_doc))->ToElement();
+				for (const XMLElement* cel = el->FirstChildElement();
+					cel;
+					cel = cel->NextSiblingElement())
 				{
-					linked_el = m_doc->NewElement(el->Value());
-					const XMLAttribute* attribute = 0;
-					for (attribute = el->FirstAttribute();
-					 attribute;
-					 attribute = attribute->Next())
+					if (strcmp(cel->Value(), "Description") == 0
+						|| strcmp(cel->Value(), "Archive") == 0
+						|| strcmp(cel->Value(), "Entry") == 0)
 					{
-						linked_el->SetAttribute(attribute->Name(),
-						 attribute->Value());
+						linked_el->InsertEndChild(cel->DeepClone(RefGetPtr(m_doc)));
 					}
-					for (const XMLElement* cel = el->FirstChildElement();
-					 cel;
-					 cel = cel->NextSiblingElement())
-					{
-						if (strcmp(cel->Value(), "Description") == 0
-						 || strcmp(cel->Value(), "Archive") == 0
-						 || strcmp(cel->Value(), "Entry") == 0)
-						{
-							linked_el->InsertEndChild(cel->ShallowClone(RefGetPtr(m_doc)));
-						}
-					}
-					copy_parent->InsertEndChild(linked_el);
 				}
-				Item* pitem = GetItemFromHandle(hparent);
-				if ((!pitem
-				  || pitem->type == ITEM_CATEGORY
-				  || pitem->type == ITEM_HEADER)
-				 && strcmp(el_type, "Category") == 0)
+				copy_parent->InsertEndChild(linked_el);
+			}
+			Item* pitem = GetItemFromHandle(hparent);
+			if ((!pitem
+				|| pitem->type == ITEM_CATEGORY
+				|| pitem->type == ITEM_HEADER)
+				&& strcmp(el_type, "Category") == 0)
+			{
+				if (!hitem)
 				{
-					if (!hitem)
-					{
-						hitem = AddItem(el, linked_el, ITEM_CATEGORY, StringType(),
-						 StringType(), hparent);
-					}
+					hitem = AddItem(el, linked_el, ITEM_CATEGORY, StringType(),
+						StringType(), hparent);
+				}
+				search_children.push_back(InsParent(el, linked_el, hitem));
+			}
+			else if ((!pitem
+				|| pitem->type == ITEM_HEADER
+				|| pitem->type == ITEM_CATEGORY
+				|| pitem->type == ITEM_VERSION)
+				&& strcmp(el_type, "Component") == 0)
+			{
+				if (!hitem)
+				{
+					hitem = AddItem(el, linked_el, ITEM_COMPONENT, StringType(),
+						StringType(), hparent);
+				}
+				if (!pitem || pitem->type != ITEM_VERSION)
 					search_children.push_back(InsParent(el, linked_el, hitem));
-				}
-				else if ((!pitem
-				  || pitem->type == ITEM_HEADER
-				  || pitem->type == ITEM_CATEGORY
-				  || pitem->type == ITEM_VERSION)
-				 && strcmp(el_type, "Component") == 0)
+			}
+			else if (pitem
+				&& (pitem->type == ITEM_CATEGORY || pitem->type == ITEM_COMPONENT)
+				&& strcmp(el_type, "Version") == 0)
+			{
+				if (!hitem)
 				{
-					if (!hitem)
+					bool first_child = false;
+					if (!vh)
 					{
-						hitem = AddItem(el, linked_el, ITEM_COMPONENT, StringType(),
-						 StringType(), hparent);
-					}
-					if (!pitem || pitem->type != ITEM_VERSION)
-						search_children.push_back(InsParent(el, linked_el, hitem));
-				}
-				else if (pitem
-				 && (pitem->type == ITEM_CATEGORY || pitem->type == ITEM_COMPONENT)
-				 && strcmp(el_type, "Version") == 0)
-				{
-					if (!hitem)
-					{
-						if (!vh)
+						vh = TreeView_GetChild(htreeview, hparent);
+						Item* vhitem = nullptr;
+						if (vh)
+							vhitem = GetItemFromHandle(vh);
+						if (!vhitem || vhitem->type != ITEM_HEADER)
 						{
-							Item* vhitem = 0;
-							vh = TreeView_GetChild(htreeview, hparent);
-							if (vh)
-								vhitem = GetItemFromHandle(vh);
-							if (!vh || (vhitem && vhitem->type != ITEM_HEADER))
-							{
-								vh = AddItem(0, 0, ITEM_HEADER, StringType(),
-								 "Version", hparent);
-							}
+							vh = AddItem(0, 0, ITEM_HEADER, StringType(),
+								"Version", hparent);
+							first_child = true;
 						}
-						hitem = AddItem(el, linked_el, ITEM_VERSION,
-						 StringType(), StringType(), vh);
-						TreeView_Expand(htreeview, vh, TVE_EXPAND);
 					}
-					if (pitem->type != ITEM_COMPONENT)
-						search_children.push_back(InsParent(el, linked_el, hparent));
-					const char* def = NonEmptyAttribute(el, "default");
-					if (def)
+					hitem = AddItem(el, linked_el, ITEM_VERSION,
+						StringType(), StringType(), vh);
+					if (first_child)
 						OnStateToggle(hitem);
+					TreeView_Expand(htreeview, vh, TVE_EXPAND);
 				}
+				if (pitem->type != ITEM_COMPONENT)
+					search_children.push_back(InsParent(el, linked_el, hparent));
+				if (NonEmptyAttribute(el, "default"))
+					OnStateToggle(hitem);
 			}
 		}
 	}
@@ -731,27 +731,27 @@ HTREEITEM ComponentsTree::AddItem
 		el_id = id.c_str();
 	else if (ex_el)
 		el_id = NonEmptyAttribute(ex_el, "id");
+	IDIndexMap::iterator found = id_items.end();
 	if (el_id)
+		found = id_items.find(el_id);
+	if (found != id_items.end())
 	{
-		IDIndexMap::iterator found = id_items.find(el_id);
-		if (found != id_items.end())
-		{
-			item_index = found->second;
-			item = RefGetPtr(index_items[item_index]);
-		}
-		else
-		{
-			item_index = index_items.size();
-			Item::Ref new_item(new Item(type, store_el));
-			item = RefGetPtr(new_item);
-			index_items.push_back(new_item);
+		item_index = found->second;
+		item = RefGetPtr(index_items[item_index]);
+	}
+	else
+	{
+		item_index = index_items.size();
+		Item::Ref new_item(new Item(type, store_el));
+		item = RefGetPtr(new_item);
+		index_items.push_back(new_item);
+		if (el_id)
 			id_items.insert(std::make_pair(std::string(el_id), item_index));
-			if (ex_el)
-			{
-				if (NonEmptyAttribute(ex_el, "prev"))
-					item->prev_inst = true;
-				UpdateItemAttrs(item, ex_el, item->prev_inst);
-			}
+		if (ex_el)
+		{
+			if (NonEmptyAttribute(ex_el, "prev"))
+				item->prev_inst = true;
+			UpdateItemAttrs(item, ex_el, item->prev_inst);
 		}
 	}
 
@@ -760,19 +760,19 @@ HTREEITEM ComponentsTree::AddItem
 
 	TVINSERTSTRUCT tvins;
 	tvins.item.mask = TVIF_TEXT | TVIF_PARAM;
-	const char* fmt = "%s";
+	const char* f = "%s";
 	if (item && item->prev_inst)
-		fmt = "[Installed] %s";
+		f = "[Installed] %s";
 	char nstr[200];
 	nstr[0] = 0;
 	if (ex_el)
 	{
 		const char* el_name = NonEmptyAttribute(ex_el, "name");
 		if (el_name)
-			snprintf(nstr, 199, fmt, el_name);
+			snprintf(nstr, 199, f, el_name);
 	}
 	if (!nstr[0] && txt.length() > 0)
-		snprintf(nstr, 199, fmt, txt.c_str());
+		snprintf(nstr, 199, f, txt.c_str());
 	if (!nstr[0])
 		return 0;
 	tvins.item.pszText = nstr;
@@ -1019,6 +1019,10 @@ void ComponentsTree::UpdateVersionedComps(HTREEITEM hparent, HTREEITEM hver)
 }
 
 
+/* Only items that are part of the actively selected version group may be
+ * toggled to a "selected" state. This function traverses the parents of an
+ * item to find Version elements and set them as "selected".
+ */
 void ComponentsTree::EnsureSelectable(Item* item)
 {
 	if (!item || !item->element)
@@ -1042,6 +1046,9 @@ void ComponentsTree::EnsureSelectable(Item* item)
 	while (!pstack.empty())
 	{
 		HTREEITEM hver = index_items[pstack.top()]->handle;
+		/* Calling OnStateToggle on a Version element, which is a radio button,
+		 * causes it to be selected.
+		 */
 		if (hver)
 			OnStateToggle(hver);
 		pstack.pop();
@@ -1053,41 +1060,38 @@ void ComponentsTree::ToggleSel(Item* item)
 {
 	if (!item)
 		return;
+	/* If this is a Component item with a version header child, see which
+	 * radio button is active and mark/unmark that element.
+	 */
 	HTREEITEM vh = 0;
-	Item* vhitem = 0;
-	if (item->handle)
-	{
+	if (item->type == ITEM_COMPONENT && item->handle)
 		vh = TreeView_GetChild(htreeview, item->handle);
-		if (vh)
-			vhitem = GetItemFromHandle(vh);
-	}
-	if (vh && (!vhitem || vhitem->type == ITEM_HEADER))
+	Item* vhitem = 0;
+	if (vh)
+		vhitem = GetItemFromHandle(vh);
+	if (vhitem && vhitem->type == ITEM_HEADER)
 	{
 		for (HTREEITEM vchild = TreeView_GetChild(htreeview, vh);
-		 vchild;
-		 vchild = TreeView_GetNextSibling(htreeview, vchild))
+			vchild;
+			vchild = TreeView_GetNextSibling(htreeview, vchild))
 		{
 			TVITEM ctvitem;
 			ctvitem.hItem = vchild;
 			ctvitem.mask = TVIF_STATE | TVIF_PARAM;
 			ctvitem.stateMask = TVIS_STATEIMAGEMASK;
-			if (TreeView_GetItem(htreeview, &ctvitem) && ctvitem.lParam > 0)
+			if (!TreeView_GetItem(htreeview, &ctvitem) || ctvitem.lParam <= 0)
+				continue;
+			Item* citem = RefGetPtr(index_items[ctvitem.lParam - 1]);
+			if (citem->check == CHECK_FULL)
 			{
-				Item* citem = RefGetPtr(index_items[ctvitem.lParam - 1]);
-				if (citem->check == CHECK_FULL)
-				{
-					citem->selected = !citem->selected;
-					ToggleSizes(citem, citem->selected);
-					break;
-				}
+				citem->selected = !citem->selected;
+				ToggleSizes(citem, citem->selected);
+				break;
 			}
 		}
 	}
-	else
-	{
-		item->selected = !item->selected;
-		ToggleSizes(item, item->selected);
-	}
+	item->selected = !item->selected;
+	ToggleSizes(item, item->selected);
 }
 
 
@@ -1103,36 +1107,40 @@ UINT ComponentsTree::SetCheckState(Item* item, CheckState state)
 void ComponentsTree::UpdateItemAttrs(Item* item, XMLElement* attr_el,
  bool prev_inst)
 {
-	if (item && attr_el)
+	if (!item || !attr_el)
+		return;
+	XMLText* txt = XMLHandle(attr_el->FirstChildElement("Description")).FirstChild().ToText();
+	if (txt && strlen(txt->Value()) > 0)
+		item->description = txt->Value();
+	int size;
+	if (attr_el->QueryIntAttribute("unsize", &size) == XML_SUCCESS)
 	{
-		XMLText* txt = XMLHandle(attr_el->FirstChildElement("Description")).FirstChild().ToText();
-		if (txt && strlen(txt->Value()) > 0)
-			item->description = txt->Value();
-		int size;
-		if (attr_el->QueryIntAttribute("unsize", &size) == XML_SUCCESS)
-		{
-			if (prev_inst)
-				uninst_size += size;
-			item->unsize = size;
-		}
-		for (XMLElement* ar_el = attr_el->FirstChildElement("Archive");
-		 ar_el;
-		 ar_el = ar_el->NextSiblingElement("Archive"))
-		{
-			const char* ar_path = NonEmptyAttribute(ar_el, "path");
-			if (ar_path)
-			{
-				if (ar_el->QueryIntAttribute("arcsize", &size) ==
-				 XML_SUCCESS)
-				{
-					int at = strlen(ar_path) - 2;
-					for (; at >= 0 && ar_path[at] != '/';
-					 --at);
-					if (inner_arcs.count(ar_path + at + 1) <= 0)
-						item->dlsize += size;
-				}
-			}
-		}
+		if (prev_inst)
+			uninst_size += size;
+		item->unsize = size;
+	}
+	for (XMLElement* ar_el = attr_el->FirstChildElement("Archive");
+		ar_el;
+		ar_el = ar_el->NextSiblingElement("Archive"))
+	{
+		StringType ar_path = NonEmptyAttribute(ar_el, "path");
+		if (!ar_path.length())
+			continue;
+		if (ar_el->QueryIntAttribute("arcsize", &size) !=
+			XML_SUCCESS)
+			continue;
+		/* Find end or first instance of '?' */
+		int qmark = 0;
+		for (; qmark < ar_path.length() && ar_path[qmark] != '?'; ++qmark)
+			;
+		/* Find filename component */
+		int fname_start = qmark - 1;
+		for (; fname_start >= 0
+				&& ar_path[fname_start] != '/' && ar_path[fname_start] != '\\';
+			--fname_start)
+			;
+		if (fname_start + 1 < ar_path.length() && inner_arcs.count(ar_path.substr(fname_start + 1, qmark - (fname_start + 1))) <= 0)
+			item->dlsize += size;
 	}
 }
 

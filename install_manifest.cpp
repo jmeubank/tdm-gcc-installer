@@ -56,14 +56,14 @@ InstallManifest::InstallManifest(const StringType& loadfile)
 
 const tinyxml2::XMLElement* InstallManifest::GetComponent(const StringType& comp_id) const
 {
-	EntrySetMap::const_iterator found = entry_setmap.find(comp_id);
+	IDToEntrySet_Map::const_iterator found = entry_setmap.find(comp_id);
 	return (found == entry_setmap.end()) ? 0 : found->second.first;
 }
 
 
 tinyxml2::XMLElement* InstallManifest::SetComponent(const StringType& comp_id)
 {
-	EntrySetMap::iterator found = entry_setmap.find(comp_id);
+	IDToEntrySet_Map::iterator found = entry_setmap.find(comp_id);
 	if (found != entry_setmap.end())
 	{
 		cur_comp = found;
@@ -84,17 +84,6 @@ tinyxml2::XMLElement* InstallManifest::SetComponent(const StringType& comp_id)
 }
 
 
-void InstallManifest::MarkComponentSuccess(bool success)
-{
-	if (cur_comp == entry_setmap.end())
-		return;
-	if (success)
-		cur_comp->second.first->SetAttribute("prev", "true");
-	else
-		cur_comp->second.first->DeleteAttribute("prev");
-}
-
-
 void InstallManifest::AddEntry(const char* entry)
 {
 	if (cur_comp == entry_setmap.end())
@@ -106,6 +95,22 @@ void InstallManifest::AddEntry(const char* entry)
 		ent_txt->SetCData(true);
 		ent_el->LinkEndChild(ent_txt);
 		cur_comp->second.first->LinkEndChild(ent_el);
+		EntryToRefCount_Map::iterator inserted = entry_ref_counts.insert({entry, 0}).first;
+		++(inserted->second);
 	}
 }
 
+
+size_t InstallManifest::DecrementRemove(const char* entry)
+{
+	EntryToRefCount_Map::iterator found = entry_ref_counts.end();
+	if (entry)
+		found = entry_ref_counts.find(entry);
+	if (found != entry_ref_counts.end())
+	{
+		if (found->second > 0)
+			--(found->second);
+		return found->second;
+	}
+	return 0;
+}

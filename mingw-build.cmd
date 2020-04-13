@@ -18,9 +18,9 @@ set "TINYXML2_DIRNAME=tinyxml2-7.1.0"
 set "NSIS_URL=file://C:/Users/John/Downloads/nsis-3.04.zip"
 set "NSIS_FILENAME=nsis-3.04.zip"
 set "NSIS_DIRNAME=nsis-3.04"
-set "UPX_URL=file://C:/Users/John/Downloads/upx-3.95-win32.zip"
-set "UPX_FILENAME=upx-3.95-win32.zip"
-set "UPX_DIRNAME=upx-3.95-win32"
+set "UPX_URL=https://github.com/upx/upx/releases/download/v3.96/upx-3.96-win32.zip"
+set "UPX_FILENAME=upx-3.96-win32.zip"
+set "UPX_DIRNAME=upx-3.96-win32"
 set "XARC_INCLUDE=C:/crossdev/xarc/include"
 set "XARC_LIB=C:/crossdev/xarc/build-cmd/libxarc.a"
 set "LUA_URL=file://C:/Users/John/Downloads/lua-5.3.5.tar.gz"
@@ -107,6 +107,7 @@ if not exist "%WD%extlibs/%LUA_DIRNAME%/src/liblua.a" (
     echo Building LUA
     pushd "%WD%extlibs/%LUA_DIRNAME%/"
     mingw32-make.exe mingw CC="gcc -m32 -std=gnu99 -flto -fuse-linker-plugin" CFLAGS="-m32 -Os -flto" LDFLAGS="-m32 -Os -fuse-linker-plugin" || exit /b %ERRORLEVEL%
+REM    mingw32-make.exe mingw CC="gcc -m32 -std=gnu99" CFLAGS="-m32 -Os" LDFLAGS="-m32 -Os" || exit /b %ERRORLEVEL%
     popd
 )
 
@@ -129,7 +130,7 @@ if not exist "%WD%Makefile" (
     cmake.exe -G "MinGW Makefiles" "%~dp0" || exit /b %ERRORLEVEL%
 )
 
-set VERBOSE=1
+REM set VERBOSE=1
 mingw32-make.exe || exit /b %ERRORLEVEL%
 
 exit /b 0
