@@ -66,7 +66,9 @@ public:
 	  int radio_index,
 	  const StringType& system_id,
 	  tinyxml2::XMLElement* comp_man_root,
-	  tinyxml2::XMLElement* prev_man_root);
+	  tinyxml2::XMLElement* prev_man_root,
+	  bool startmenu_selected,
+	  bool addpath_selected);
 
 	bool OnStateToggle(HTREEITEM hitem);
 

@@ -95,7 +95,9 @@ bool ComponentsTree::BuildTreeView
   int radio_index,
   const StringType& system_id,
   XMLElement* comp_man_root,
-  XMLElement* prev_man_root)
+  XMLElement* prev_man_root,
+  bool startmenu_selected,
+  bool addpath_selected)
 {
 	htreeview = htv;
 	ncheck = check_index;
@@ -123,12 +125,14 @@ bool ComponentsTree::BuildTreeView
 	 AddItem(0, 0, ITEM_EXTRA, "startmenu", "Start Menu items", 0);
 	GetItemFromHandle(hsmenu)->description =
 	 "Add an entry for " STR_SHORTNAME " to the Start Menu";
-	OnStateToggle(hsmenu);
+	if (startmenu_selected)
+		OnStateToggle(hsmenu);
 	HTREEITEM haddpath =
 	 AddItem(0, 0, ITEM_EXTRA, "addpath", "Add to PATH", 0);
 	GetItemFromHandle(haddpath)->description =
 	 "Add the " STR_SHORTNAME " 'bin' folder to the PATH environment variable";
-	OnStateToggle(haddpath);
+	if (addpath_selected)
+		OnStateToggle(haddpath);
 	TreeView_Expand(htreeview, hroot, TVE_EXPAND);
 	return true;
 }
@@ -376,11 +380,17 @@ void ComponentsTree::WriteInstMan
 		link_el->LinkEndChild(new_el);
 	}
 
-	// MiscFiles node
+	// MiscFiles & addpath nodes
 	const XMLElement* mfiles = inst_man.GetComponent("MiscFiles");
 	if (mfiles)
 	{
 		XMLElement* new_el = mfiles->DeepClone(&out)->ToElement();
+		sys_out->LinkEndChild(new_el);
+	}
+	const XMLElement* addpath = inst_man.GetComponent("AddToPathEnv");
+	if (addpath)
+	{
+		XMLElement* new_el = addpath->DeepClone(&out)->ToElement();
 		sys_out->LinkEndChild(new_el);
 	}
 

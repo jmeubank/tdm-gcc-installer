@@ -160,7 +160,7 @@ static void MaybeUpdateSizeLabel()
 			 + FormatSize(ctree.GetUninstallSize());
 		}
 		if (ltext.length() <= 0)
-			ltext = "(No changes)";
+			ltext = "(No disk space change)";
 		Static_SetText(hsizelabel, ltext.c_str());
 	}
 }
@@ -444,41 +444,83 @@ extern "C" void __declspec(dllexport) SetManifest
 {
 	NSIS::UpdateParams(string_size, variables, stacktop, extra);
 
-	StringType ret = "OK";
+	StringType ret = "bad XML";
 
 	StringType fname = NSIS::popstring();
 	HWND parentwnd = (HWND)NSIS::popint();
 
-	working_man = XMLDocumentRef(new tinyxml2::XMLDocument(true, tinyxml2::COLLAPSE_WHITESPACE));
-	if (working_man->LoadFile(fname.c_str()) == XML_SUCCESS)
+	do
 	{
+		working_man = XMLDocumentRef(new tinyxml2::XMLDocument(true, tinyxml2::COLLAPSE_WHITESPACE));
+		if (!working_man->LoadFile(fname.c_str()) == XML_SUCCESS)
+			break;
 		XMLElement* minver =
 		 working_man->RootElement()->FirstChildElement("MinVersion");
-		if (minver)
+		if (!minver)
+			break;
+		const char* ver = minver->Attribute("version");
+		if (!ver || strlen(ver) <= 0)
+			break;
+		if (VersionCompare(STR_SETUP_VER, ver) >= 0)
 		{
-			const char* ver = minver->Attribute("version");
-			if (ver && strlen(ver) > 0)
-			{
-				if (VersionCompare(STR_SETUP_VER, ver) < 0)
-				{
-					XMLText* txtel =
-					 XMLHandle(minver->FirstChild()).ToText();
-					if (txtel)
-					{
-						MessageBox(parentwnd, txtel->Value(),
-						 "Updated Version Available",
-						 MB_OK | MB_ICONINFORMATION);
-						ret = "update";
-					}
-				}
-			}
+			ret = "OK";
+			break;
 		}
-	}
-	else
-	{
+		ret = "update";
+		XMLText* txtel = XMLHandle(minver->FirstChild()).ToText();
+		if (!txtel)
+			break;
+		StringType mb_contents = fmt("%s\n\nOpen a web browser to the download page?", txtel->Value());
+		if (MessageBox(parentwnd, mb_contents.c_str(),
+		 "Updated Version Available",
+		 MB_YESNO | MB_ICONQUESTION) == IDYES)
+		{
+			const char* url = minver->Attribute("url");
+			if (url && url[0])
+				ShellExecute(NULL, "open", url, NULL, NULL, SW_SHOWNORMAL);
+		}
+	} while (false);
+
+	if (ret != "OK")
 		working_man = 0;
-		ret = "bad XML";
-	}
+
+	NSIS::pushstring(ret.c_str());
+}
+
+
+extern "C" void __declspec(dllexport) IsSameEdition
+(HWND hwndParent,
+ int string_size,
+ char *variables,
+ stack_t **stacktop,
+ extra_parameters *extra)
+{
+	NSIS::UpdateParams(string_size, variables, stacktop, extra);
+
+	StringType ret = "Couldn't load installation manifest";
+
+	StringType fname = NSIS::popstring();
+	StringType inner_id = NSIS::popstring();
+
+	do
+	{
+		XMLDocumentRef check_man(new tinyxml2::XMLDocument(true, tinyxml2::COLLAPSE_WHITESPACE));
+		if (check_man->LoadFile(fname.c_str()) != XML_SUCCESS)
+			break;
+		XMLElement* system =
+		 check_man->RootElement()->FirstChildElement("System");
+		if (!system)
+			break;
+		const char* installed_id = system->Attribute("id");
+		if (!installed_id || strlen(installed_id) <= 0)
+			break;
+		if (strcmp(installed_id, inner_id.c_str()) != 0)
+		{
+			ret = "Edition not supported by this installer";
+			break;
+		}
+		ret = "OK";
+	} while(false);
 
 	NSIS::pushstring(ret.c_str());
 }
@@ -662,6 +704,13 @@ extern "C" void __declspec(dllexport) PopulateInstallTypeList
 }
 
 
+static bool FileExists(const char* fname)
+{
+	struct stat st;
+	return (stat(fname, &st) == 0);
+}
+
+
 extern "C" void __declspec(dllexport) CreateComponentsTree
 (HWND hwndParent,
  int string_size,
@@ -673,6 +722,9 @@ extern "C" void __declspec(dllexport) CreateComponentsTree
 
 	HWND hdialog = (HWND)NSIS::popint();
 	StringType system_id = NSIS::popstring();
+	StringType mui_mode = NSIS::popstring();
+	StringType inst_dir = NSIS::popstring();
+	StringType startmenu_folder = NSIS::popstring();
 
 	if (system_id.length() == 0)
 	{
@@ -685,6 +737,19 @@ extern "C" void __declspec(dllexport) CreateComponentsTree
 		if (!sys_id || strlen(sys_id) <= 0)
 			return;
 		system_id = sys_id;
+	}
+
+	bool startmenu_selected = true;
+	bool addpath_selected = true;
+	if (prev_man)
+	{
+		if (!FileExists(startmenu_folder.c_str()))
+			startmenu_selected = false;
+		XMLElement* addpath_el = XMLHandle(prev_man->RootElement()->FirstChildElement("System")).FirstChildElement("Component").ToElement();
+		while (addpath_el && !(addpath_el->Attribute("id", "AddToPathEnv")))
+			addpath_el = addpath_el->NextSiblingElement("Component");
+		if (!addpath_el)
+			addpath_selected = false;
 	}
 
 	htree = CreateWindowEx(
@@ -720,7 +785,8 @@ extern "C" void __declspec(dllexport) CreateComponentsTree
 
 	ctree.BuildTreeView(htree, ncheck, nradio, system_id,
 	 working_man ? working_man->RootElement() : 0,
-	 prev_man ? prev_man->RootElement() : 0);
+	 prev_man ? prev_man->RootElement() : 0,
+	 startmenu_selected, addpath_selected);
 
 	UpdateInstallType();
 }
@@ -1044,13 +1110,6 @@ static void RemoveEntry(const char* base, const char* entry)
 			RAOnCallback(ent + blen + 1, true, true, false);
 		}
 	}
-}
-
-
-static bool FileExists(const char* fname)
-{
-	struct stat st;
-	return (stat(fname, &st) == 0);
 }
 
 
@@ -1988,7 +2047,7 @@ static REGSAM MaybeWOW64Flag()
 }
 
 
-extern "C" void __declspec(dllexport) EnsureInPathEnv
+extern "C" void __declspec(dllexport) UpdatePathEnvIfChanged
 (HWND hwndParent,
  int string_size,
  char *variables,
@@ -2000,6 +2059,21 @@ extern "C" void __declspec(dllexport) EnsureInPathEnv
 	StringType mui_mode = NSIS::popstring();
 
 	StringType ret = "OK";
+
+	int smindex = ctree.GetIndex("addpath");
+	if (smindex >= 0)
+	{
+		if (ctree.IsSelected(smindex))
+			ret = "added";
+		else if (prev_man)
+		{
+			XMLElement* addpath_el = XMLHandle(prev_man->RootElement()->FirstChildElement("System")).FirstChildElement("Component").ToElement();
+			while (addpath_el && !addpath_el->Attribute("id", "AddToPathEnv"))
+				addpath_el = addpath_el->NextSiblingElement("Component");
+			if (addpath_el)
+				ret = "removed";
+		}
+	}
 
 	do {
 		HKEY base_key = HKEY_CURRENT_USER;
@@ -2026,12 +2100,39 @@ extern "C" void __declspec(dllexport) EnsureInPathEnv
 			}
 			value_buf[value_size] = 0;
 			current_path = value_buf;
+		}
+		if (ret == "added")
+		{
 			if (current_path.find(path) != StringType::npos)
+			{
+				ret = "OK";
 				break;
+			}
 			if (current_path.length() > 0)
 				current_path += ";";
+			current_path += path;
 		}
-		current_path += path;
+		else if (ret == "removed")
+		{
+			StringType::size_type fd;
+			while ((fd = current_path.find(path)) != StringType::npos)
+			{
+				if ((fd = current_path.find(path + ";")) != StringType::npos)
+				{
+					current_path.erase(fd, path.length() + 1);
+					continue;
+				}
+				if ((fd = current_path.find(StringType(";") + path)) != StringType::npos)
+				{
+					current_path.erase(fd, path.length() + 1);
+					continue;
+				}
+				fd = current_path.find(path);
+				current_path.erase(fd, path.length());
+			}
+		}
+		else
+			break;
 		HKEY write_key;
 		if (RegCreateKeyEx(base_key, base_path, 0, 0, 0,
 		 MaybeWOW64Flag() | KEY_WRITE, 0, &write_key, 0) != ERROR_SUCCESS) {
@@ -2049,6 +2150,9 @@ extern "C" void __declspec(dllexport) EnsureInPathEnv
 		SendMessageTimeout(HWND_BROADCAST, WM_SETTINGCHANGE, 0,
 		 (LPARAM)"Environment", SMTO_ABORTIFHUNG, 5000, &dwReturnValue);
 	} while (false);
+
+	if (ret == "added")
+		inst_man->SetComponent("AddToPathEnv");
 
 	NSIS::pushstring(ret.c_str());
 }

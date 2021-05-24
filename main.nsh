@@ -23,8 +23,8 @@
 !define UNINSTKEY "TDM-GCC"
 !define READMEFILE_32 "README-gcc-tdm.md"
 !define READMEFILE_64 "README-gcc-tdm64.md"
-!define INFOURL "http://tdm-gcc.tdragon.net/"
-!define UPDATEURL "http://tdm-gcc.tdragon.net/"
+!define INFOURL "https://jmeubank.github.io/tdm-gcc/"
+!define UPDATEURL "https://jmeubank.github.io/tdm-gcc/"
 !define PUBLISHER "TDM"
 
 
@@ -206,20 +206,35 @@ Section "Install Components" SEC_INSTALL_COMPONENTS
 		 "" "" "" "" "Open ${SHORTNAME} Command Prompt"
 		CreateShortCut "$1\Modify or Remove MinGW.lnk" \
 		 "$inst_dir\__installer\$EXEFILE"
+	${Else}
+		${If} "$system_id" == "tdm64"
+			StrCpy $1 "${STARTMENU_ENTRY_64}"
+		${Else}
+			StrCpy $1 "${STARTMENU_ENTRY_32}"
+		${EndIf}
+		${If} ${FileExists} "$SMPROGRAMS\$1\MinGW Command Prompt.lnk"
+			ShellLink::GetShortCutArgs "$SMPROGRAMS\$1\MinGW Command Prompt.lnk"
+			Pop $0
+			tdminstall::StringInString /NOUNLOAD "$inst_dir\" "$0"
+			Pop $0
+			${If} "$0" == 1
+				Delete "$SMPROGRAMS\$1\MinGW Command Prompt.lnk"
+				Delete "$SMPROGRAMS\$1\Modify or Remove MinGW.lnk"
+				RMDir "$SMPROGRAMS\$1"
+				DetailPrint "Removed '$1' Start Menu entry"
+			${EndIf}
+		${EndIf}
 	${EndIf}
 
-	; PATH addition
-	tdminstall::GetComponentSelected /NOUNLOAD "addpath"
+	; PATH addition/removal
+	tdminstall::UpdatePathEnvIfChanged /NOUNLOAD "$inst_dir\bin" "$MultiUser.InstallMode"
 	Pop $0
-	${If} $0 == 1
-		DetailPrint "Adding '$inst_dir\bin' to PATH"
-		tdminstall::EnsureInPathEnv /NOUNLOAD "$inst_dir\bin" \
-		 "$MultiUser.InstallMode"
-		Pop $1
-		${If} "$1" != "OK"
-			DetailPrint "$1"
-			Goto onerror
-		${EndIf}
+	${If} "$0" == "added"
+		DetailPrint "Added '$inst_dir\bin' to PATH"
+	${ElseIf} "$0" == "removed"
+		DetailPrint "Removed '$inst_dir\bin' from PATH"
+	${ElseIf} "$0" != "OK"
+		DetailPrint "ERROR: $0"
 	${EndIf}
 
 	Goto instend
@@ -316,7 +331,7 @@ Section "un.Uninstall"
 		${If} ${FileExists} "$SMPROGRAMS\$1\MinGW Command Prompt.lnk"
 			ShellLink::GetShortCutArgs "$SMPROGRAMS\$1\MinGW Command Prompt.lnk"
 			Pop $0
-			tdminstall::StringInString /NOUNLOAD "$uninst" "$0"
+			tdminstall::StringInString /NOUNLOAD "$uninst\" "$0"
 			Pop $0
 			${If} "$0" == 1
 				Delete "$SMPROGRAMS\$1\MinGW Command Prompt.lnk"
@@ -330,7 +345,7 @@ Section "un.Uninstall"
 		ReadRegStr $0 SHELL_CONTEXT \
 		 "Software\Microsoft\Windows\CurrentVersion\Uninstall\${UNINSTKEY}" \
 		 "UninstallString"
-		tdminstall::StringInString /NOUNLOAD "$uninst" "$0"
+		tdminstall::StringInString /NOUNLOAD "$uninst\" "$0"
 		Pop $0
 		${If} "$0" == 1
 			DeleteRegKey SHELL_CONTEXT \
@@ -438,11 +453,24 @@ Function .onVerifyInstDir
 				 'STR:(No installation manifest present in this directory)'
 			${EndIf}
 			Abort
-		${Else}
-			${If} $man_msg != ""
-				SendMessage $man_msg ${WM_SETTEXT} 0 'STR:'
-			${EndIf}
 		${EndIf}
+	${EndIf}
+!ifdef INNER_COMPONENTS
+	${If} "$setup_type" == "manage"
+	${AndIf} $dlupdates != "yes"
+		tdminstall::IsSameEdition /NOUNLOAD "$inst_dir\__installer\installed_man.txt" "${INNER_COMPONENTS_SYS}"
+		Pop $0
+		${If} "$0" != "OK"
+			${If} $man_msg != ""
+				SendMessage $man_msg ${WM_SETTEXT} 0 \
+				'STR:($0)'
+			${EndIf}
+			Abort
+		${EndIf}
+	${EndIf}
+!endif
+	${If} $man_msg != ""
+		SendMessage $man_msg ${WM_SETTEXT} 0 'STR:'
 	${EndIf}
 FunctionEnd
 
@@ -1017,7 +1045,11 @@ Function Components_Create
 	 "Or, select the optional components you wish to have installed:"
 	Pop $1
 
-	tdminstall::CreateComponentsTree /NOUNLOAD $0 "$system_id"
+	${If} "$system_id" == "tdm64"
+		tdminstall::CreateComponentsTree /NOUNLOAD $0 "$system_id" "$MultiUser.InstallMode" "$inst_dir" "$SMPROGRAMS\${STARTMENU_ENTRY_64}"
+	${Else}
+		tdminstall::CreateComponentsTree /NOUNLOAD $0 "$system_id" "$MultiUser.InstallMode" "$inst_dir" "$SMPROGRAMS\${STARTMENU_ENTRY_32}"
+	${EndIf}
 
 	${NSD_CreateGroupBox} 210u 45u 89u 94u "Description"
 	Pop $1
