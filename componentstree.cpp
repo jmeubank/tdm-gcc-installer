@@ -1038,7 +1038,7 @@ void ComponentsTree::EnsureSelectable(Item* item)
 	if (!item || !item->element)
 		return;
 	std::stack< int > pstack;
-	for (XMLElement* p_el = XMLHandle(item->element->Parent()).ToElement();
+	for (XMLElement* p_el = item->element;
 	 p_el;
 	 p_el = XMLHandle(p_el->Parent()).ToElement())
 	{

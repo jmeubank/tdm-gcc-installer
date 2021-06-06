@@ -792,34 +792,6 @@ extern "C" void __declspec(dllexport) CreateComponentsTree
 }
 
 
-extern "C" void __declspec(dllexport) PopulateMirrorList
-(HWND hwndParent,
- int string_size,
- char *variables,
- stack_t **stacktop,
- extra_parameters *extra)
-{
-	NSIS::UpdateParams(string_size, variables, stacktop, extra);
-
-	HWND hlist = (HWND)NSIS::popint();
-
-	mirrors.clear();
-	for (XMLElement* mir = XMLHandle(working_man->RootElement()).FirstChildElement("Mirror").ToElement();
-	 mir;
-	 mir = mir->NextSiblingElement("Mirror"))
-	{
-		const char* mir_name = mir->Attribute("name");
-		const char* mir_url = mir->Attribute("baseurl");
-		if (mir_name && strlen(mir_name) > 0 && mir_url && strlen(mir_url) > 0)
-		{
-			SendMessage(hlist, LB_ADDSTRING, 0, (LPARAM)mir_name);
-			mirrors.push_back(mir_url);
-		}
-	}
-	SendMessage(hlist, LB_SETCURSEL, 0, 0);
-}
-
-
 extern "C" void __declspec(dllexport) EnumArchives
 (HWND hwndParent,
  int string_size,
@@ -852,22 +824,6 @@ extern "C" void __declspec(dllexport) EnumArchives
 			break;
 	}
 	NSIS::pushstring(result.c_str());
-}
-
-
-extern "C" void __declspec(dllexport) GetSelMirror
-(HWND hwndParent,
- int string_size,
- char *variables,
- stack_t **stacktop,
- extra_parameters *extra)
-{
-	HWND hlist = (HWND)NSIS::popint();
-	int sel = SendMessage(hlist, LB_GETCURSEL, 0, 0);
-	if (sel >= 0)
-		NSIS::pushstring(mirrors[sel].c_str());
-	else
-		NSIS::pushstring("");
 }
 
 
