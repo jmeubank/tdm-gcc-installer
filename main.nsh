@@ -106,6 +106,22 @@ Page custom Tidbits_Create Tidbits_Leave
 !define MUI_PAGE_CUSTOMFUNCTION_LEAVE InstDir_Leave
 !insertmacro MUI_PAGE_DIRECTORY
 
+Section
+	${If} ${Silent}
+		${If} "$INSTDIR" == ""
+			${GetRoot} "$PROGRAMFILES" $0
+			${If} "$system_id" == "tdm64"
+				StrCpy $inst_dir "$0${DEF_INST_DIR_64}"
+			${Else}
+				StrCpy $inst_dir "$0${DEF_INST_DIR_32}"
+			${EndIf}
+		${Else}
+			StrCpy $inst_dir "$INSTDIR"
+		${EndIf}
+		tdminstall::SetInstLocation /NOUNLOAD "$inst_dir"
+	${EndIf}
+SectionEnd
+
 Page custom Components_Create
 
 !define MUI_INSTFILESPAGE_FINISHHEADER_TEXT "$inst_ftext"
@@ -386,7 +402,11 @@ Function .onInit
 	${EndIf}
 	StrCpy $setup_type "undefined"
 	StrCpy $inst_dir ""
-	StrCpy $dlupdates "yes"
+	${If} ${Silent}
+		StrCpy $dlupdates "no"
+	${Else}
+		StrCpy $dlupdates "yes"
+	${EndIf}
 	StrCpy $comp_text "Completed successfully"
 	StrCpy $inst_ftext "Installation Complete"
 	StrCpy $inst_fsubtext "Setup was completed successfully."
@@ -600,6 +620,12 @@ Function WizardAction_Create
 		${If} "$inst_dir" != ""
 			tdminstall::SetInstLocation /NOUNLOAD "$inst_dir"
 		${EndIf}
+		Abort
+	${EndIf}
+
+	${If} ${Silent}
+		StrCpy $setup_type "create"
+		StrCpy $stype_shortdesc "New Installation"
 		Abort
 	${EndIf}
 
@@ -1018,6 +1044,10 @@ FunctionEnd
 
 
 Function Components_Create
+	${If} ${Silent}
+		Abort
+	${EndIf}
+
 	!insertmacro MUI_HEADER_TEXT "$stype_shortdesc: Choose Components" \
 	 "Choose which features of ${SHORTNAME} you want installed."
 
